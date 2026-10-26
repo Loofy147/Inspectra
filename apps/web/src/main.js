@@ -274,7 +274,7 @@ function renderQueue() {
     '<button class="button button-primary" data-create-inspection>' + icon("plus") + ' New inspection</button>') +
     (searchQuery ? '<div class="search-context">Search results for <strong>' + esc(searchQuery) + '</strong> · ' + filtered.length + ' matching records</div>' : '') +
     panel("Outstanding work", "Open inspections and corrective actions sorted by urgency",
-      filtered.length ? '<div class="table-wrap"><table><thead><tr><th>Work item</th><th>Type</th><th>Owner</th><th>Due</th><th>Priority</th><th>State</th><th></th></tr></thead><tbody>' +
+      (filtered.length ? '<div class="table-wrap"><table><thead><tr><th>Work item</th><th>Type</th><th>Owner</th><th>Due</th><th>Priority</th><th>State</th><th></th></tr></thead><tbody>' +
       filtered.map((item) => '<tr><td><div class="primary-cell">' + esc(item.title) + '</div><div class="secondary-cell">' + esc(item.id) + '</div></td><td>' + esc(item.kind) + '</td><td>' + esc(item.owner || "Unassigned") + '</td><td>' + dateCell(item.dueAt) + '</td><td>' + priorityPill(item.priority) + '</td><td>' + pill(item.status) + '</td><td><button class="link-button" ' + (item.target === "inspection" ? 'data-open-inspection="' : 'data-open-action="') + esc(item.id) + '">Open ' + icon("arrow") + '</button></td></tr>').join("") +
       '</tbody></table></div>' : tableMessage(filtered)) +
     '<div class="panel-footer">This queue uses only the records in this browser. It does not send notifications or escalate work to another user.</div>');
