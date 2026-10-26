@@ -6,7 +6,8 @@ import {
 } from "../src/domain.js";
 
 import {
-  createManagementFollowUp, startManagementReview, completeManagementReview
+  createManagementFollowUp, startManagementReview, completeManagementReview,
+  isAuditOverdue, transitionAudit
 } from "../src/domain.js";
 
 const at = (iso) => new Date(iso);
@@ -141,3 +142,31 @@ test("management follow-ups require an active review, owner, title, due date and
   assert.equal(action.priority, "High");
 });
 
+
+test("audit overdue state ends only on completion or cancellation", () => {
+  const audit = { dueAt: "2026-10-25T12:00:00.000Z", status: "in_progress" };
+  assert.equal(isAuditOverdue(audit, fixedNow), true);
+  assert.equal(isAuditOverdue({ ...audit, status: "completed" }, fixedNow), false);
+  assert.equal(isAuditOverdue({ ...audit, dueAt: "bad-date" }, fixedNow), false);
+});
+
+test("audit completion requires every required step and a conclusion", () => {
+  const audit = { id: "AUD-1", status: "in_progress", version: 2, checklist: [
+    { required: true, status: "done" }, { required: true, status: "open" }
+  ] };
+  assert.throws(() => transitionAudit(audit, "completed", "The review is done.", fixedNow), /every required audit step/i);
+  const active = { ...audit, checklist: audit.checklist.map((step) => ({ ...step, status: "done" })) };
+  assert.throws(() => transitionAudit(active, "completed", "ok", fixedNow), /audit conclusion/i);
+  const completed = transitionAudit(active, "completed", "Evidence reviewed and conclusion recorded for the defined audit scope.", fixedNow);
+  assert.equal(completed.status, "completed");
+  assert.equal(completed.completedAt, fixedNow.toISOString());
+  assert.equal(audit.status, "in_progress");
+});
+
+test("audit lifecycle only permits scheduled to in-progress and in-progress to completed", () => {
+  assert.throws(() => transitionAudit({ status: "scheduled", checklist: [] }, "completed", "This is a conclusion.", fixedNow), /transition is not allowed/i);
+  const scheduled = { status: "scheduled", version: 1 };
+  const started = transitionAudit(scheduled, "in_progress", "", fixedNow);
+  assert.equal(started.status, "in_progress");
+  assert.equal(started.version, 2);
+});

@@ -29,6 +29,21 @@ export function makeChecklist(doneCount = 0) {
   }));
 }
 
+export function makeAuditChecklist(doneCount = 0) {
+  const steps = [
+    "Audit scope and criteria confirmed",
+    "Required evidence reviewed",
+    "Findings and responses recorded",
+    "Conclusion and follow-up documented"
+  ];
+  return steps.map((label, index) => ({
+    id: "audit-step-" + (index + 1),
+    label,
+    required: true,
+    status: index < doneCount ? "done" : "open"
+  }));
+}
+
 export function createDemoState() {
   const sites = [
     { id: "SITE-001", name: "North Distribution Centre", location: "North district", manager: "Maya Chen", status: "operational", region: "Region A" },
@@ -75,9 +90,10 @@ export function createDemoState() {
     { id: "RSK-004", title: "Battery charging control", siteId: "SITE-004", category: "Electrical / energy", likelihood: 3, consequence: 4, owner: "Samir Ali", status: "review_required", lastReviewedAt: dateAt(-60, 10), control: "Controlled charging area and maintenance checks" }
   ];
   const audits = [
-    { id: "AUD-001", title: "Quarterly site assurance review", scope: "Sites and work areas", owner: "Maya Chen", dueAt: dateAt(4, 15), status: "scheduled", progress: "Not started" },
-    { id: "AUD-002", title: "Controlled-document review", scope: "Procedures and templates", owner: "Samir Ali", dueAt: dateAt(-2, 15), status: "in_progress", progress: "Evidence review" },
-    { id: "AUD-003", title: "Contractor onboarding sample", scope: "People and suppliers", owner: "Amir Haddad", dueAt: dateAt(9, 15), status: "scheduled", progress: "Not started" }
+    { id: "AUD-001", title: "Quarterly site assurance review", scope: "Sites and work areas", criteria: "Current approved site inspection procedure (sample reference)", owner: "Maya Chen", dueAt: dateAt(4, 15), status: "scheduled", checklist: makeAuditChecklist(0), version: 1 },
+    { id: "AUD-002", title: "Controlled-document review", scope: "Procedures and templates", criteria: "Document owner, revision and review-date checks (sample reference)", owner: "Samir Ali", dueAt: dateAt(-2, 15), status: "in_progress", startedAt: dateAt(-2, 10), checklist: makeAuditChecklist(2), version: 2 },
+    { id: "AUD-003", title: "Contractor onboarding sample", scope: "People and suppliers", criteria: "Required onboarding evidence checks (sample reference)", owner: "Amir Haddad", dueAt: dateAt(9, 15), status: "scheduled", checklist: makeAuditChecklist(0), version: 1 },
+    { id: "AUD-004", title: "Monthly corrective-action process review", scope: "Findings and actions", criteria: "Ownership, due date and closure-note checks (sample reference)", owner: "Lina Moreau", dueAt: dateAt(-4, 15), status: "completed", startedAt: dateAt(-6, 10), completedAt: dateAt(-4, 13), completionNote: "Illustrative audit conclusion: the sample records had accountable owners and follow-up notes.", checklist: makeAuditChecklist(4), version: 3 }
   ];
   const reviews = [
     {

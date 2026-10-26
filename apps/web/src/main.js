@@ -1,6 +1,6 @@
 import {
-  calculateKpis, closeAction, isActionOverdue, isInspectionOverdue,
-  toCsv, transitionInspection, verifyFinding
+  calculateKpis, closeAction, isActionOverdue, isAuditOverdue, isInspectionOverdue,
+  toCsv, transitionAudit, transitionInspection, verifyFinding
 } from "./domain.js";
 import { createDemoState, dateInputAt, dateAt, makeChecklist } from "./seed.js";
 import { loadWorkspace, resetWorkspace, saveWorkspace } from "./store.js";
@@ -368,19 +368,35 @@ function renderSites() {
 
 function renderAudits() {
   const d = currentData();
-  const audits = applySearch(d.audits);
+  const audits = applySearch(d.audits.slice().sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt)));
   const reqs = applySearch(d.requirements);
-  return pageHeading("Audit & compliance", "Coordinate audit activity and track requirements that need follow-up.", "ASSURANCE") +
+  const completeCount = d.audits.filter((a) => a.status === "completed").length;
+  const activeCount = d.audits.filter((a) => a.status === "in_progress").length;
+  const overdueCount = d.audits.filter((a) => isAuditOverdue(a)).length;
+  const auditRows = audits.map((audit) => {
+    const checks = (audit.checklist || []).filter((item) => item.required !== false);
+    const done = checks.filter((item) => ["done", "not_applicable"].includes(item.status)).length;
+    return '<tr><td><div class="primary-cell">' + esc(audit.title) + '</div><div class="secondary-cell">' + esc(audit.id) + '</div></td>' +
+      '<td>' + esc(audit.scope) + '</td><td>' + esc(audit.owner) + '</td><td>' + dateCell(audit.dueAt) + '</td>' +
+      '<td>' + pill(isAuditOverdue(audit) ? "overdue" : audit.status) + '</td><td>' + done + ' / ' + checks.length + '</td>' +
+      '<td><button class="link-button" data-open-audit="' + esc(audit.id) + '">Open audit ' + icon("arrow") + '</button></td></tr>';
+  }).join("");
+  return pageHeading("Audit & compliance", "Coordinate an auditable review workflow and track requirements needing attention.", "ASSURANCE") +
+    '<div class="metric-grid">' +
+    metricCard("Audit programme", String(d.audits.length), "Sample audit records in this browser", "checklist", "") +
+    metricCard("In progress", String(activeCount), "Audit work currently underway", "clipboard", activeCount ? "tone-warn" : "") +
+    metricCard("Completed", String(completeCount), "Audits with a recorded conclusion", "check", "") +
+    metricCard("Overdue", String(overdueCount), "Open audits past their due timestamp", "clock", overdueCount ? "tone-alert" : "") +
+    '</div>' +
     '<div class="content-grid equal">' +
-    panel("Audit programme", "Scheduled and in-progress assurance work",
-      audits.length ? '<div class="table-wrap"><table><thead><tr><th>Audit</th><th>Scope</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead><tbody>' +
-      audits.map((a) => '<tr><td><div class="primary-cell">' + esc(a.title) + '</div><div class="secondary-cell">' + esc(a.id) + '</div></td><td>' + esc(a.scope) + '</td><td>' + esc(a.owner) + '</td><td>' + dateCell(a.dueAt) + '</td><td>' + pill(a.status) + '</td></tr>').join("") +
-      '</tbody></table></div>' : tableMessage(audits)) +
+    panel("Audit programme", "Complete all required steps and record a conclusion before closing an audit",
+      auditRows ? '<div class="table-wrap"><table><thead><tr><th>Audit</th><th>Scope</th><th>Owner</th><th>Due</th><th>Status</th><th>Steps</th><th></th></tr></thead><tbody>' +
+      auditRows + '</tbody></table></div>' : tableMessage(audits), '<span class="pill">' + audits.length + ' records</span>') +
     panel("Requirement follow-up", "Illustrative internal control checks; not a legal register",
       reqs.length ? '<div class="exception-list panel-body">' + reqs.map((req) =>
         '<div class="exception-row"><div class="exception-copy"><div class="exception-title">' + esc(req.title) + '</div><div class="exception-meta">' + esc(req.id + " · Owner: " + req.owner) + '</div><div class="exception-meta">Evidence reference: ' + esc(req.evidence) + '</div></div>' + pill(req.status) + '</div>'
       ).join("") + '</div>' : tableMessage(reqs)) +
-    '</div><p class="footer-note">No laws, standard clauses or regulatory obligations are supplied or validated in this demo. Requirement applicability must be established per organization and jurisdiction.</p>';
+    '</div><p class="footer-note">Requirements are illustrative and unvalidated. This audit workflow is a product prototype, not a substitute for a qualified auditor or a jurisdiction-specific compliance assessment.</p>';
 }
 
 function renderPeople() {
@@ -451,6 +467,7 @@ function renderReports() {
     ["Inspection register", "Inspection status, owner, site, due time, checklist progress.", "inspections"],
     ["Findings and actions", "Severity, workflow state, owner, due time and closure notes.", "actions"],
     ["Risk register", "Risk assumptions, owners, review dates and controls.", "risks"],
+    ["Audit register", "Audit scope, criteria, status, required steps and conclusion.", "audits"],
     ["Management reviews", "Review status, period, chair, minutes and open follow-ups.", "reviews"],
     ["KPI snapshot", "Formula-based current metrics with definitions and demo-data caveat.", "kpis"]
   ];
@@ -605,6 +622,47 @@ function renderModal() {
   }
 
 
+
+  if (type === "create-audit") {
+    return modalWrap("Schedule an audit", "Creates an illustrative audit with four required completion steps.",
+      '<form id="createAuditForm" data-form="create-audit"><div class="form-grid">' +
+      '<div class="field full"><label for="auditTitle">Audit title *</label><input id="auditTitle" name="title" required maxlength="140" placeholder="e.g. Monthly control assurance review"></div>' +
+      '<div class="field"><label for="auditScope">Scope *</label><input id="auditScope" name="scope" required maxlength="160" placeholder="Sites, processes, controls…"></div>' +
+      '<div class="field"><label for="auditOwner">Owner *</label><select id="auditOwner" name="owner" required>' + d.people.map((p) => '<option>' + esc(p.name) + '</option>').join("") + '</select></div>' +
+      '<div class="field full"><label for="auditCriteria">Criteria / reference *</label><input id="auditCriteria" name="criteria" required maxlength="240" placeholder="Approved procedure or defined criteria reference"></div>' +
+      '<div class="field"><label for="auditDueDate">Due date *</label><input type="date" id="auditDueDate" name="dueDate" value="' + esc(dateInputAt(7)) + '" required></div>' +
+      '</div><p class="field-note">Use approved criteria from the organization's controlled documents. No legal text or standards have been validated in this demo.</p>' +
+      '<div class="modal-footer modal-inline-footer"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("plus") + ' Schedule audit</button></div></form>', "", true);
+  }
+
+  if (type === "audit-detail" || type === "complete-audit") {
+    const audit = d.audits.find((a) => a.id === modalState.id);
+    if (!audit) return modalWrap("Audit unavailable", "The audit was not found in the current browser workspace.", emptyState("Record not found", "Close this dialog and refresh the workspace."));
+    const checks = (audit.checklist || []).filter((item) => item.required !== false);
+    const done = checks.filter((item) => ["done", "not_applicable"].includes(item.status)).length;
+    const allDone = checks.length > 0 && done === checks.length;
+    if (type === "complete-audit") {
+      return modalWrap("Record audit conclusion", audit.id + " · " + audit.title,
+        '<div class="demo-banner">' + icon("info") + '<div><strong>Conclusion is required for completion</strong><p>Complete every required audit step, then record a substantive conclusion. Evidence files are not managed by this demo.</p></div></div>' +
+        '<form id="completeAuditForm" data-form="complete-audit"><div class="field"><label for="auditConclusion">Audit conclusion *</label><textarea id="auditConclusion" name="note" required minlength="12" placeholder="Summarize scope, reviewed evidence, findings and next actions.">' + esc(audit.completionNote || "") + '</textarea><div class="field-note">At least 12 characters.</div></div>' +
+        '<div class="modal-footer modal-inline-footer"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("check") + ' Complete audit</button></div></form>', "", true);
+    }
+    let footer = '<button class="button" type="button" data-close-dialog>Close</button>';
+    if (audit.status === "scheduled") footer += '<button class="button button-primary" type="button" data-start-audit="' + esc(audit.id) + '">' + icon("arrow") + ' Start audit</button>';
+    if (audit.status === "in_progress") footer += '<button class="button button-primary" type="button" data-finish-audit="' + esc(audit.id) + '"' + (allDone ? "" : " disabled") + '>' + icon("check") + ' Record conclusion</button>';
+    return modalWrap(audit.title, audit.id + " · " + audit.scope,
+      '<div class="modal-record-grid"><div><div class="modal-record-label">Status</div>' + pill(isAuditOverdue(audit) ? "overdue" : audit.status) + '</div>' +
+      '<div><div class="modal-record-label">Owner</div><div class="modal-record-value">' + esc(audit.owner) + '</div></div>' +
+      '<div><div class="modal-record-label">Due date</div><div class="modal-record-value">' + esc(formatDateTime(audit.dueAt)) + '</div></div>' +
+      '<div><div class="modal-record-label">Criteria</div><div class="modal-record-value">' + esc(audit.criteria || "Not recorded") + '</div></div></div>' +
+      '<div class="modal-section-title">Required audit steps · ' + done + ' of ' + checks.length + ' complete</div>' +
+      '<div class="checklist">' + checks.map((item) => '<button type="button" class="check-row ' + (["done", "not_applicable"].includes(item.status) ? "is-done" : "") +
+        '" data-audit-check="' + esc(item.id) + '" data-audit-id="' + esc(audit.id) + '"' + (audit.status !== "in_progress" ? " disabled" : "") + '><span class="check-box"></span><span><span class="check-label">' + esc(item.label) + '</span><span class="check-meta">' +
+        (["done", "not_applicable"].includes(item.status) ? "Marked complete in demo" : "Required step · not complete") + '</span></span></button>').join("") + '</div>' +
+      (!allDone && audit.status === "in_progress" ? '<p class="field-note top-space">The conclusion action remains disabled until every required step is marked complete.</p>' : '') +
+      (audit.completionNote ? '<div class="modal-section-title">Recorded conclusion</div><p class="page-subtitle">' + esc(audit.completionNote) + '</p>' : ''),
+      footer, true);
+  }
   if (type === "create-review") {
     const peopleOptions = d.people.map((p) => '<option>' + esc(p.name) + '</option>').join("");
     return modalWrap("Schedule a management review", "Creates a local review record; no calendar invitation or notification is sent.",
@@ -722,6 +780,34 @@ function onClick(event) {
   if (target.closest("[data-close-dialog]")) { closeModal(); return; }
   if (target.closest("[data-create-inspection]")) { openModal("create-inspection"); return; }
   if (target.closest("[data-create-finding]")) { openModal("create-finding"); return; }
+  if (target.closest("[data-create-audit]")) { openModal("create-audit"); return; }
+  const openAuditButton = target.closest("[data-open-audit]");
+  if (openAuditButton) { openModal("audit-detail", openAuditButton.dataset.openAudit); return; }
+  const startAuditButton = target.closest("[data-start-audit]");
+  if (startAuditButton) {
+    const audit = currentData().audits.find((a) => a.id === startAuditButton.dataset.startAudit);
+    try {
+      Object.assign(audit, transitionAudit(audit, "in_progress"));
+      addActivity("started", "audit", audit.id, "Audit started: " + audit.title);
+      modalState = { type: "audit-detail", id: audit.id };
+      persistAndRender("Audit started in the local demo.");
+    } catch (error) { showToast(error.message, true); render(); }
+    return;
+  }
+  const auditCheckButton = target.closest("[data-audit-check]");
+  if (auditCheckButton) {
+    const audit = currentData().audits.find((a) => a.id === auditCheckButton.dataset.auditId);
+    const step = audit?.checklist?.find((item) => item.id === auditCheckButton.dataset.auditCheck);
+    if (!audit || audit.status !== "in_progress" || !step) return;
+    step.status = step.status === "done" ? "open" : "done";
+    audit.version = (audit.version || 1) + 1;
+    addActivity("updated", "audit", audit.id, "Audit step updated: " + step.label);
+    modalState = { type: "audit-detail", id: audit.id };
+    persistAndRender("Audit checklist updated in the local demo.");
+    return;
+  }
+  const finishAuditButton = target.closest("[data-finish-audit]");
+  if (finishAuditButton) { openModal("complete-audit", finishAuditButton.dataset.finishAudit); return; }
   if (target.closest("[data-create-review]")) { openModal("create-review"); return; }
   const openReviewButton = target.closest("[data-open-review]");
   if (openReviewButton) { openModal("review-detail", openReviewButton.dataset.openReview); return; }
@@ -804,6 +890,39 @@ function onClick(event) {
   }
 }
 
+
+function createAudit(form) {
+  const data = new FormData(form);
+  const title = String(data.get("title") || "").trim();
+  const scope = String(data.get("scope") || "").trim();
+  const criteria = String(data.get("criteria") || "").trim();
+  const owner = String(data.get("owner") || "").trim();
+  const dueDate = String(data.get("dueDate") || "");
+  if (title.length < 5 || !scope || !criteria || !owner || !dueDate) {
+    throw new Error("Complete the title, scope, criteria, owner and due date.");
+  }
+  const audit = {
+    id: nextId("AUD", currentData().audits),
+    title, scope, criteria, owner,
+    dueAt: new Date(dueDate + "T15:00:00").toISOString(),
+    status: "scheduled", checklist: makeAuditChecklist(0),
+    version: 1, createdAt: new Date().toISOString()
+  };
+  currentData().audits.unshift(audit);
+  addActivity("created", "audit", audit.id, "Audit scheduled: " + audit.title);
+  activePage = "audits";
+  modalState = null;
+  persistAndRender("Audit scheduled in the local demo.");
+}
+
+function finishAudit(form) {
+  const data = new FormData(form);
+  const audit = currentData().audits.find((a) => a.id === modalState?.id);
+  Object.assign(audit, transitionAudit(audit, "completed", data.get("note")));
+  addActivity("completed", "audit", audit.id, "Audit conclusion recorded");
+  modalState = { type: "audit-detail", id: audit.id };
+  persistAndRender("Audit completed in the local demo with a recorded conclusion.");
+}
 function createInspection(form) {
   const data = new FormData(form);
   const title = String(data.get("title") || "").trim();
@@ -936,6 +1055,8 @@ function onSubmit(event) {
   event.preventDefault();
   try {
     if (form.dataset.form === "create-inspection") createInspection(form);
+    if (form.dataset.form === "create-audit") createAudit(form);
+    if (form.dataset.form === "complete-audit") finishAudit(form);
     if (form.dataset.form === "create-finding") createFinding(form);
     if (form.dataset.form === "create-review") createManagementReview(form);
     if (form.dataset.form === "add-review-follow-up") addManagementFollowUp(form);
@@ -992,6 +1113,18 @@ function exportData(kind) {
       { label: "Consequence (sample)", key: "consequence" }, { label: "Owner", key: "owner" },
       { label: "Status", key: "status" }, { label: "Control", key: "control" }
     ], d.risks.map((r) => ({ ...r, site: siteName(r.siteId) })));
+  } else if (kind === "audits") {
+    csvDownload("inspectra-demo-audits.csv", [
+      { label: "ID", key: "id" }, { label: "Title", key: "title" }, { label: "Scope", key: "scope" },
+      { label: "Criteria", key: "criteria" }, { label: "Owner", key: "owner" }, { label: "Due at", key: "dueAt" },
+      { label: "Status", key: "status" }, { label: "Steps complete", key: "stepsComplete" },
+      { label: "Steps required", key: "stepsRequired" }, { label: "Conclusion", key: "completionNote" }
+    ], d.audits.map((audit) => {
+      const checklist = (audit.checklist || []).filter((item) => item.required !== false);
+      return { ...audit, status: isAuditOverdue(audit) ? "overdue" : audit.status,
+        stepsComplete: checklist.filter((item) => ["done", "not_applicable"].includes(item.status)).length,
+        stepsRequired: checklist.length };
+    }));
   } else if (kind === "reviews") {
     csvDownload("inspectra-demo-management-reviews.csv", [
       { label: "Review ID", key: "id" }, { label: "Title", key: "title" }, { label: "Period", key: "period" },

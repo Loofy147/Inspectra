@@ -188,3 +188,34 @@ export function createManagementFollowUp(review, input, id, now = new Date()) {
     version: 1
   };
 }
+
+export function isAuditOverdue(audit, asOf = new Date()) {
+  if (!audit || ["completed", "cancelled"].includes(audit.status) || !audit.dueAt) return false;
+  const due = time(audit.dueAt);
+  const now = time(asOf);
+  return Number.isFinite(due) && Number.isFinite(now) && due < now;
+}
+
+export function transitionAudit(audit, targetState, completionNote = "", now = new Date()) {
+  if (!audit) throw new Error("Audit record not found.");
+  const timestamp = new Date(now).toISOString();
+  if (targetState === "in_progress" && audit.status === "scheduled") {
+    return { ...audit, status: "in_progress", startedAt: timestamp, version: (audit.version || 1) + 1 };
+  }
+  if (targetState === "completed" && audit.status === "in_progress") {
+    const required = (audit.checklist || []).filter((item) => item.required !== false);
+    if (!required.length || required.some((item) => !["done", "not_applicable"].includes(item.status))) {
+      throw new Error("Complete every required audit step before completing the audit.");
+    }
+    const note = String(completionNote || "").trim();
+    if (note.length < 12) throw new Error("Add an audit conclusion of at least 12 characters.");
+    return {
+      ...audit,
+      status: "completed",
+      completedAt: timestamp,
+      completionNote: note,
+      version: (audit.version || 1) + 1
+    };
+  }
+  throw new Error("This audit transition is not allowed.");
+}
