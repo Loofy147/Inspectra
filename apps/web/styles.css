@@ -133,10 +133,16 @@ h1 { font-size: clamp(25px, 2.1vw, 31px); letter-spacing: -.045em; line-height: 
 .state-row { display: grid; grid-template-columns: 108px minmax(50px,1fr) 28px; align-items: center; gap: 12px; font-size: 11px; }
 .state-name { color: #526173; }
 .bar-track { background: #eef2f6; height: 8px; border-radius: 99px; overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 99px; background: #477e94; }
-.bar-fill.done { background: #168774; }
-.bar-fill.progress { background: #4a7ad3; }
-.bar-fill.late { background: #cc8b2f; }
+.bar-track svg { display: block; width: 100%; height: 8px; overflow: visible; }
+.bar-fill { fill: #477e94; }
+.bar-fill.done { fill: #168774; }
+.bar-fill.progress { fill: #4a7ad3; }
+.bar-fill.late { fill: #cc8b2f; }
+.top-space { margin-top: 12px; }
+.health-value { margin-top: 10px; }
+.section-spacer { height: 16px; }
+.modal-inline-footer { margin: 18px -21px -19px; }
+.breadcrumb-separator { color: #bac4cf; }
 .bar-value { text-align: right; font-weight: 750; font-variant-numeric: tabular-nums; }
 .exception-list { display: grid; }
 .exception-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 12px 0; border-bottom: 1px solid #edf0f4; }
@@ -285,6 +291,7 @@ tbody tr:hover { background: #fbfcfe; }
   .state-row { grid-template-columns: 86px minmax(40px,1fr) 20px; gap: 8px; }
   .modal-backdrop { padding: 10px; }
   .modal-content, .modal-header, .modal-footer { padding-left: 15px; padding-right: 15px; }
+  .modal-inline-footer { margin: 18px -15px -15px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *:before, *:after { scroll-behavior: auto !important; transition: none !important; }

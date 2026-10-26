@@ -239,7 +239,7 @@ function renderOverview() {
     panel("Current inspection workload", "Current record count by status · snapshot, not a historical trend",
       '<div class="panel-body"><div class="state-bars">' + stateDefs.map((state) => {
         const width = Math.max(0, Math.min(100, state[1] / totalInspections * 100));
-        return '<div class="state-row"><div class="state-name">' + esc(state[0]) + '</div><div class="bar-track"><div class="bar-fill ' + state[2] + '" style="width:' + width + '%"></div></div><div class="bar-value">' + state[1] + '</div></div>';
+        return '<div class="state-row"><div class="state-name">' + esc(state[0]) + '</div><div class="bar-track"><svg viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="' + esc(state[1] + ' of ' + totalInspections) + '"><rect class="bar-fill ' + state[2] + '" x="0" y="0" width="' + width + '" height="8" rx="4"></rect></svg></div><div class="bar-value">' + state[1] + '</div></div>';
       }).join("") + '</div></div><div class="panel-footer">Counts are calculated from browser-local sample records. No historical trend store is connected.</div>') +
     panel("Attention required", "Prioritized exceptions from current records", '<div class="panel-body">' + attentionHTML + '</div>',
       '<button class="link-button" data-page="queue">View work queue ' + icon("arrow") + '</button>') +
@@ -336,7 +336,7 @@ function renderRisk() {
         '<div class="risk-metrics"><div><div class="risk-number">' + esc(String(risk.likelihood)) + ' / 5</div><div class="risk-number-label">Likelihood (sample)</div></div>' +
         '<div><div class="risk-number">' + esc(String(risk.consequence)) + ' / 5</div><div class="risk-number-label">Consequence (sample)</div></div>' +
         '<div><div class="risk-number">' + esc(String(score)) + ' / 25</div><div class="risk-number-label">Product only</div></div></div>' +
-        '<div class="exception-meta" style="margin-top:12px">Site: ' + esc(siteName(risk.siteId)) + ' · Owner: ' + esc(risk.owner) + '</div>' +
+        '<div class="exception-meta top-space">Site: ' + esc(siteName(risk.siteId)) + ' · Owner: ' + esc(risk.owner) + '</div>' +
         '<div class="exception-meta">Control: ' + esc(risk.control) + '</div><div class="exception-meta">Last reviewed: ' + esc(formatDate(risk.lastReviewedAt, { year: true })) + '</div></article>';
     }).join("") + '</div>' +
     '<p class="footer-note">Risk scores are not regulatory thresholds or safety permissions. A competent organization owner must approve the method, scales, thresholds and review cadence before operational decisions rely on them.</p>';
@@ -440,8 +440,8 @@ function renderSystem() {
   ];
   return pageHeading("System health", "An explicit view of current data and capability boundaries.", "PLATFORM STATUS",
     '<button class="button" data-reset-demo>' + icon("refresh") + ' Reset demo data</button>') +
-    '<div class="health-grid">' + healthItems.map((item) => '<article class="health-item"><div class="health-item-top"><div class="health-title">' + esc(item[0]) + '</div>' + pill(item[3]) + '</div><div class="primary-cell" style="margin-top:10px">' + esc(item[1]) + '</div><div class="health-desc">' + esc(item[2]) + '</div></article>').join("") + '</div>' +
-    '<div style="height:16px"></div>' +
+    '<div class="health-grid">' + healthItems.map((item) => '<article class="health-item"><div class="health-item-top"><div class="health-title">' + esc(item[0]) + '</div>' + pill(item[3]) + '</div><div class="primary-cell health-value">' + esc(item[1]) + '</div><div class="health-desc">' + esc(item[2]) + '</div></article>').join("") + '</div>' +
+    '<div class="section-spacer" aria-hidden="true"></div>' +
     panel("Local workspace diagnostics", "Current browser-local counts; a successful render is not a production-readiness check",
       '<div class="table-wrap"><table><thead><tr><th>Record family</th><th>Count</th><th>Storage / truth boundary</th></tr></thead><tbody>' +
       [["Sites", d.sites.length], ["Assets", d.assets.length], ["Inspections", d.inspections.length], ["Findings", d.findings.length], ["Actions", d.actions.length], ["Risks", d.risks.length], ["Audit activities", d.audits.length], ["Activity items", d.activity.length]].map((r) => '<tr><td class="primary-cell">' + esc(r[0]) + '</td><td>' + r[1] + '</td><td>Current browser demo data</td></tr>').join("") +
@@ -499,7 +499,7 @@ function renderModal() {
       '<div class="field"><label for="inspectionDue">Due date *</label><input type="date" id="inspectionDue" name="dueDate" value="' + esc(dateInputAt(1)) + '" required></div>' +
       '<div class="field"><label for="inspectionPriority">Priority</label><select id="inspectionPriority" name="priority"><option>High</option><option selected>Medium</option><option>Low</option></select></div>' +
       '</div><p class="field-note">This creates a browser-local record only. No one else will receive or see it.</p>' +
-      '<div class="modal-footer" style="margin:18px -21px -19px"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("plus") + ' Create inspection</button></div></form>', "", true);
+      '<div class="modal-footer modal-inline-footer"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("plus") + ' Create inspection</button></div></form>', "", true);
   }
 
   if (type === "inspection-detail") {
@@ -519,7 +519,7 @@ function renderModal() {
       '<div><div class="modal-record-label">Due date</div><div class="modal-record-value">' + esc(formatDateTime(inspection.dueAt)) + '</div></div><div><div class="modal-record-label">Priority</div>' + priorityPill(inspection.priority) + '</div></div>' +
       '<div class="modal-section-title">Required checklist · ' + done + ' of ' + items.length + ' complete</div>' + checklist +
       (inspection.status === "in_progress" && !canComplete ? '<p class="field-note">Complete every required check before the completion transition is enabled.</p>' : '') +
-      (inspection.completedAt ? '<div class="field-note" style="margin-top:12px">Completed at ' + esc(formatDateTime(inspection.completedAt)) + '</div>' : ''),
+      (inspection.completedAt ? '<div class="field-note top-space">Completed at ' + esc(formatDateTime(inspection.completedAt)) + '</div>' : ''),
       footer, true);
   }
 
@@ -535,7 +535,7 @@ function renderModal() {
       '<div class="field full"><label for="findingDescription">Observation / context</label><textarea id="findingDescription" name="description" maxlength="1200" placeholder="Record context, not assumptions. Avoid sensitive details in this demo."></textarea></div>' +
       '<div class="field full"><label class="check-option"><input type="checkbox" name="createAction" checked> Create a linked corrective action</label></div>' +
       '</div><p class="field-note">This does not upload evidence or trigger an incident-response process.</p>' +
-      '<div class="modal-footer" style="margin:18px -21px -19px"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("plus") + ' Save finding</button></div></form>', "", true);
+      '<div class="modal-footer modal-inline-footer"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("plus") + ' Save finding</button></div></form>', "", true);
   }
 
   if (type === "finding-detail" || type === "verify-finding") {
@@ -547,7 +547,7 @@ function renderModal() {
       return modalWrap("Verify finding effectiveness", finding.id + " · " + finding.title,
         '<div class="demo-banner">' + icon("info") + '<div><strong>Verification is a separate decision</strong><p>Only record verification when the organization’s defined checks support it. This demo does not validate physical conditions or evidence files.</p></div></div>' +
         '<form id="verifyFindingForm" data-form="verify-finding"><div class="field"><label for="verifyNote">Verification note *</label><textarea id="verifyNote" name="note" required minlength="8" placeholder="Describe how effectiveness was checked and what was observed."></textarea><div class="field-note">At least 8 characters. Record the rationale, not just “done”.</div></div>' +
-        '<div class="modal-footer" style="margin:18px -21px -19px"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("check") + ' Verify finding</button></div></form>', "", true);
+        '<div class="modal-footer modal-inline-footer"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("check") + ' Verify finding</button></div></form>', "", true);
     }
     return modalWrap(finding.title, finding.id + " · " + siteName(finding.siteId),
       '<div class="modal-record-grid"><div><div class="modal-record-label">Severity</div>' + priorityPill(finding.severity) + '</div><div><div class="modal-record-label">Status</div>' + pill(finding.status) + '</div>' +
@@ -568,7 +568,7 @@ function renderModal() {
       return modalWrap("Resolve corrective action", action.id + " · " + action.title,
         '<div class="demo-banner">' + icon("info") + '<div><strong>Resolution is not effectiveness verification</strong><p>Explain what was done. A linked finding remains open until separately verified.</p></div></div>' +
         '<form id="closeActionForm" data-form="close-action"><div class="field"><label for="resolutionNote">Resolution note *</label><textarea id="resolutionNote" name="note" required minlength="8" placeholder="Record the action taken and resulting state."></textarea><div class="field-note">At least 8 characters. Evidence uploads are not enabled.</div></div>' +
-        '<div class="modal-footer" style="margin:18px -21px -19px"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("check") + ' Resolve action</button></div></form>', "", true);
+        '<div class="modal-footer modal-inline-footer"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("check") + ' Resolve action</button></div></form>', "", true);
     }
     const finding = d.findings.find((f) => f.id === action.findingId);
     return modalWrap(action.title, action.id + " · Corrective action",
@@ -588,7 +588,7 @@ function render() {
   const queueCount = currentData().inspections.filter((i) => !["completed", "cancelled"].includes(i.status)).length +
     currentData().actions.filter((a) => !["resolved", "verified", "cancelled"].includes(a.status)).length;
   app.innerHTML = '<div class="app-shell">' + renderSidebar() + '<div class="main-shell">' +
-    '<header class="topbar"><div class="breadcrumb">Inspectra Core <span style="color:#bac4cf">/</span> <strong>' + esc(meta[0]) + '</strong></div>' +
+    '<header class="topbar"><div class="breadcrumb">Inspectra Core <span class="breadcrumb-separator">/</span> <strong>' + esc(meta[0]) + '</strong></div>' +
     '<div class="topbar-actions"><form class="search-box" id="searchForm" role="search">' + icon("search") +
     '<input id="globalSearch" name="q" type="search" value="' + esc(searchQuery) + '" placeholder="Search records…" aria-label="Search records"><button class="link-button" type="submit" aria-label="Apply search">Search</button></form>' +
     '<div class="user-chip"><div class="avatar">DO</div><div class="user-details"><div class="user-name">Demo operator</div><div class="user-role">Local demo identity</div></div></div></div></header>' +

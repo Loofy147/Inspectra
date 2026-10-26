@@ -123,7 +123,7 @@ export function verifyFinding(finding, linkedActions, verificationNote, now = ne
 function csvCell(value) {
   let text = value == null ? "" : String(value);
   // Prevent formula execution when text fields are opened in spreadsheet software.
-  if (typeof value === "string" && /^[\t\r ]*[=+@]/.test(text)) text = "'" + text;
+  if (typeof value === "string" && /^[\t\r ]*[=+\-@]/.test(text)) text = "'" + text;
   if (typeof value === "string" && /^-[0-9]/.test(text)) {
     // Preserve ordinary negative numeric-looking text as a safe literal.
     text = "'" + text;
