@@ -253,7 +253,7 @@ function renderOverview() {
       '<div class="exception-row"><div class="exception-copy"><div class="exception-title">Closed is not effective</div><div class="exception-meta">An action can be resolved without the linked finding being verified effective.</div></div></div>' +
       '<div class="exception-row"><div class="exception-copy"><div class="exception-title">Local data is not shared</div><div class="exception-meta">Other users and devices do not receive these records.</div></div></div>' +
       '</div></div>') +
-    '</div><p class="footer-note">Metric basis: the formula is implemented in the tested domain module. Before operational use, confirm the organization's cohort definitions, risk method, data completeness and escalation policy.</p>';
+    '</div><p class="footer-note">Metric basis: the formula is implemented in the tested domain module. Before operational use, confirm the approved cohort definitions, risk method, data completeness and escalation policy.</p>';
 }
 
 function renderQueue() {
