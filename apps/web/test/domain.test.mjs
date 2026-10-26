@@ -98,4 +98,10 @@ test("CSV output quotes values and neutralizes spreadsheet formula text", () => 
   ]);
   assert.match(csv, /""quoted""/);
   assert.match(csv, /"'=HYPERLINK/);
+  const dangerous = toCsv([{ label: "value", key: "value" }], [
+    { value: "-CMD('x')" },
+    { value: "@SUM(1,2)" }
+  ]);
+  assert.match(dangerous, /"'-CMD/);
+  assert.match(dangerous, /"'@SUM/);
 });

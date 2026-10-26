@@ -22,7 +22,9 @@ export function loadWorkspace() {
 
 export function saveWorkspace(workspace) {
   try {
-    globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(workspace));
+    const storage = globalThis.localStorage;
+    if (!storage || typeof storage.setItem !== "function") return false;
+    storage.setItem(STORAGE_KEY, JSON.stringify(workspace));
     return true;
   } catch {
     return false;
