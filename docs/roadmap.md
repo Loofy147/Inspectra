@@ -1,145 +1,117 @@
 # Inspectra Implementation Roadmap
 
-**Status:** Proposed and not yet evidence of implementation  
-**Prepared:** 2026-10-25
+**Status:** Active build sequence for the professional sector-neutral core  
+**Prepared:** 2026-10-26
 
-Use this checklist as a working delivery register. A checked item means the linked artifact or test exists and has been verified, not that it has merely been discussed.
+The core must be built to a professional standard before market/sector selection becomes a development gate. Sector discovery can inform usability and configuration, but the shared platform foundation must not depend on one sector being chosen first.
 
-## Stage 0 — Repository and system discovery
+A checklist item is complete only when a linked artifact or test exists and has been verified.
 
-- [ ] Record app framework, package manager, runtime entry points, and supported environments.
-- [ ] Identify deployment target, environments, configuration, and existing secrets handling without exposing secret values.
-- [ ] Identify current persistence model, authentication, tenancy, roles, and authorization boundaries.
-- [ ] Inventory current pages, routes, core records, sample/demo data, exports, and external integrations.
-- [ ] Record existing tests, commands, CI jobs, and latest pass/fail evidence.
-- [ ] Create a baseline architecture diagram and known-limitations list.
-- [ ] Keep demo/placeholder capabilities clearly labeled until independently verified.
+## Stage 0 — Baseline and explicit boundaries
 
-**Acceptance gate:** a reproducible local setup and source-of-truth system inventory exist. No feature is reported as implemented without code and verification evidence.
+- [x] Establish repository purpose, initial KPI catalogue, and management expansion plan.
+- [x] Establish sector-neutral product and assurance principles.
+- [x] Establish a roadmap and a testable domain-rule foundation.
+- [ ] Record final architecture and deployment decisions after the first end-to-end implementation.
+- [ ] Inventory actual CI, hosting, identity, persistence, storage, and integration status from system evidence.
 
-## Stage 1 — Domain-neutral operational assurance core
+**Acceptance gate:** repository state and unsupported capabilities are documented; the demo/live boundary is explicit.
 
-- [ ] Define stable entity IDs and relations for organizations, sites, areas, assets, users, inspection plans, checklist templates, inspection instances, findings, actions, evidence metadata, and events.
-- [ ] Define inspection lifecycle and transition guards.
-- [ ] Version templates and preserve the template version used by each inspection.
-- [ ] Define statuses separately from checklist outcomes, severity, risk, evidence status, and authorization state.
-- [ ] Add assignable owners, due timestamps, escalation rules, and reopen handling.
-- [ ] Add controlled evidence requirements and review/accept/reject states.
-- [ ] Add event records for high-value state changes with actor, time, reason, and entity version.
-- [ ] Define permissions and organization isolation on the server side.
-- [ ] Add migrations, validation, and referential-integrity tests.
-- [ ] Add mobile-friendly capture and explicit offline/sync behavior if discovery confirms it is required.
+## Stage 1 — Shared operational model and working interface
 
-**Acceptance gate:** one inspection can be scheduled, completed, linked to a finding, assigned as an action, evidenced, verified, and traced end-to-end from source record to final state.
+- [ ] Stable IDs and explicit relations for organizations, sites, areas, assets, inspections, versioned checklists, findings, actions, risks, controls, evidence metadata, and events.
+- [ ] Explicit status, outcome, severity, risk, evidence, data-quality, and authorization concepts.
+- [ ] Validated lifecycle transitions and guardrails.
+- [ ] One complete trace: plan → inspection → finding → action → evidence → effectiveness verification.
+- [ ] Responsive, keyboard-usable work queue and record-detail flows.
+- [ ] Clear demo, local-only, empty, stale, incomplete, and error states.
 
-## Stage 2 — Trustworthy KPI engine
+**Acceptance gate:** the core flow works against a defined data contract and domain tests. No live-data claim is allowed.
 
-- [ ] Create a versioned metric registry: formula, scope/cohort, numerator, denominator, exclusions, period, source, freshness, owner, and limitations.
-- [ ] Implement inspection plan completion, on-time rate, overdue backlog, checklist completion, and inspection coverage.
-- [ ] Implement critical open findings, corrective-action overdue rate, action aging, closure lead time, and recurrence only when required fields exist.
-- [ ] Implement required-field completeness, evidence completeness, source freshness, and data-quality warnings.
-- [ ] Show numerator/denominator and drill-through records for rates.
-- [ ] Distinguish zero, unknown, unavailable, stale, incomplete, and not configured.
-- [ ] Preserve metric definition version and query parameters with exports.
-- [ ] Test cancelled/rescheduled records, missing dates, boundary timestamps, time zones, reopened records, duplicate events, and changing templates.
-- [ ] Independently calculate expected KPI results from seeded test fixtures.
-- [ ] Display explicit sample-data labels until real source records are connected.
+## Stage 2 — Persistence, identity and access controls
 
-**Acceptance gate:** every KPI has a written definition, known-answer automated tests, record-level drill-down, and a source/freshness state.
+- [ ] Select and document the production persistence/authentication architecture.
+- [ ] Organization/tenant isolation and server-enforced authorization model.
+- [ ] Database constraints and validation for required fields and relations.
+- [ ] Versioned templates and record-level state history.
+- [ ] Evidence storage policy, permissions, metadata, integrity, and retention.
+- [ ] Explicit data ownership, deletion, export, backup, restore, and privacy policy.
+- [ ] Integration contract including retries, idempotency, and source freshness.
 
-## Stage 3 — Management control loop
+**Acceptance gate:** persistence survives sessions and devices; access isolation and role boundaries pass automated tests. Until then, demo storage remains local.
 
-- [ ] Add risk and controls register with approved/versioned assessment method.
-- [ ] Add audit plans, scope/criteria, evidence requests, findings, and auditor/reviewer roles.
-- [ ] Add corrective/preventive action with root-cause field, interim control, due date, closure evidence, and effectiveness review.
-- [ ] Add management-review records: date, participants/roles, inputs, decisions, owners, target dates, and follow-up status.
-- [ ] Add configurable thresholds and escalation paths with version/approval history.
-- [ ] Prevent self-verification where organizational policy requires independent review.
-- [ ] Add site assurance profiles with transparent contributing measures rather than an opaque composite score.
+## Stage 3 — Professional measurement engine
 
-**Acceptance gate:** a manager can trace a critical exception to source records, assign a response, review evidence, verify effectiveness, and see the change reflected in tested metrics.
+- [ ] Versioned metric definitions with purpose, formula, cohort, numerator, denominator, filters, period, source, freshness, owner, and caveats.
+- [ ] Inspection completion, on-time rate, overdue backlog, checklist completion, and coverage.
+- [ ] Critical open findings, action aging, overdue actions, closure time, and effectiveness/recurrence where the required history exists.
+- [ ] Source-data quality, evidence completeness, freshness, and audit-event coverage.
+- [ ] Record-level drill-down, reproducible exports, and known-answer tests.
+- [ ] Distinct visual states for zero, unknown, unavailable, stale, incomplete, and not configured.
 
-## Stage 4 — Select one vertical pack through discovery
+**Acceptance gate:** each KPI has a formula, seeded boundary tests, independently reproducible expected values, and source/period metadata.
 
-Run interviews and workflow walkthroughs before committing to a segment. Investigate these hypotheses in priority order:
+## Stage 4 — Management operating system
 
-- [ ] Multi-site facilities and property operations.
-- [ ] Construction and contractor-heavy projects.
-- [ ] Manufacturing and warehousing.
+- [ ] Risk and controls register with an approved, versioned method.
+- [ ] Audit planning, scope/criteria, evidence requests, findings, and response workflow.
+- [ ] CAPA with root cause, owner, due date, interim controls, closure evidence, and independent effectiveness review where required.
+- [ ] Management review records with decisions, owners, dates, and follow-up actions.
+- [ ] Controlled documents and template versions.
+- [ ] Work queue with escalation policy and a clear distinction between recommendation and authorization.
+- [ ] Sites/assets, people/contractors, and operational-readiness primitives.
+- [ ] Reporting and exports that reconcile to underlying records.
 
-For the selected segment:
+**Acceptance gate:** managers can inspect exceptions, assign accountable work, review evidence, record decisions, and verify their effects against traceable records.
 
-- [ ] Name the buyer, daily user, affected workers, and approval roles.
-- [ ] Document the real current workflow and failure points.
-- [ ] Obtain permission to use anonymized sample forms/reports.
-- [ ] Identify jurisdiction-specific obligations and have a qualified practitioner validate applicability.
-- [ ] Select one high-frequency workflow and build it end-to-end.
-- [ ] Test with target users in a realistic environment.
-- [ ] Record task completion, time-to-complete, error rate, missed required fields, and user feedback.
-- [ ] Reject or revise the segment hypothesis when evidence contradicts it.
+## Stage 5 — Production assurance and operational resilience
 
-**Acceptance gate:** documented user validation plus measurable evidence of task usefulness; a market hypothesis alone does not pass.
+- [ ] Server-enforced permissions, organization-boundary tests, and secure session handling.
+- [ ] Security review mapped to OWASP ASVS; dependency and configuration checks.
+- [ ] Auditable state changes with actor, time, reason, entity version, and retention controls.
+- [ ] Tested backup and restore, migration rollback, and recovery procedures.
+- [ ] Failure states for upload, integration, timeout, duplicate/replayed events, and partial availability.
+- [ ] Accessibility, mobile use, performance, observability, and incident procedures.
+- [ ] CI checks and release gates with retained results.
+- [ ] Residual risks and operational owners recorded.
 
-## Stage 5 — Reusable domain packs
+**Acceptance gate:** release readiness is supported by reproducible security, reliability, access-control, recovery, and usability evidence.
 
-Proceed only after the core pattern has proven reusable.
+## Stage 6 — Sector packs, standards and localization
 
-- [ ] Asset maintenance and calibration.
-- [ ] Contractor, supplier, credential, and induction assurance.
-- [ ] Competence, training, and role-based authorization.
-- [ ] Permit-to-work and operational readiness.
-- [ ] Document and standard control.
-- [ ] Incident, near-miss, and learning workflows.
-- [ ] Environmental controls.
-- [ ] Quality/process assurance and nonconformity workflows.
-- [ ] Change management and emergency preparedness.
+This stage follows the reusable core; sector validation is not the prerequisite for building the core.
 
-For every pack, define the domain-specific fields, controls, validations, permissions, reports, KPI denominators, required evidence, localization needs, and applicable references. Do not assume a template alone makes the product compliant with a standard or law.
+- [ ] Use stakeholder research to prioritize sector-specific templates and integration needs.
+- [ ] Add approved domain packs without duplicating core entities or workflows.
+- [ ] Document jurisdiction, applicability, source edition, effective date, and approval for each rule set.
+- [ ] Keep thresholds, legal obligations, risk scales, and forms versioned and configurable.
+- [ ] Validate domain packs with competent practitioners and real workflow evidence.
+- [ ] Never claim legal conformity or management-system certification merely because a template exists.
 
-## Stage 6 — Production readiness
-
-- [ ] Authentication, recovery, session security, role/permission checks, and organization isolation are tested.
-- [ ] Sensitive operations are authorized by the server; client-only checks are not relied on.
-- [ ] Evidence storage includes access controls, validation, retention, and auditable access where needed.
-- [ ] Audit events resist silent alteration and have tested retention, access, and export controls.
-- [ ] Backups and restore are successfully tested.
-- [ ] Integration retries are idempotent and failed/stale sources are visible.
-- [ ] Errors, timeouts, rate limits, and partial failures have safe user-visible states.
-- [ ] Accessibility and mobile use are checked on real target devices.
-- [ ] Performance and capacity targets are stated and measured.
-- [ ] Security review and dependency checks are recorded.
-- [ ] Privacy, retention, data export, deletion, and incident procedures are documented.
-- [ ] Monitoring and operational ownership are assigned.
-- [ ] Recovery and rollback procedures are tested.
-- [ ] Automated test and CI evidence is linked to the release candidate.
-- [ ] Known limitations and residual risks are approved before release.
-
-**Acceptance gate:** release readiness is supported by reproducible test and operational evidence; documentation or a dashboard status label by itself is insufficient.
+Candidate packs: facilities/property, construction/contractors, manufacturing/warehousing, food operations, retail/hospitality, fleet/logistics, and specialist environments.
 
 ## Cross-cutting definition of done
 
-- [ ] The user problem and accountable role are documented.
-- [ ] The full state model and invalid transitions are tested.
-- [ ] Data model, validation, permissions, and audit events are reviewed.
-- [ ] KPI formulas and denominator behavior are documented.
-- [ ] Empty, stale, invalid, partial, and error states are handled.
-- [ ] Evidence and exported reports trace back to source records.
-- [ ] Automated tests cover happy path, boundaries, permissions, and failure handling.
-- [ ] Mobile and keyboard flows are usable.
+- [ ] The user problem and accountable role are named.
+- [ ] Workflow, state transitions, and invalid transitions are specified.
+- [ ] Required fields, constraints, relations, and evidence requirements are defined.
+- [ ] Authorization and tenant boundaries are enforced by trusted backend controls.
+- [ ] Sensitive state changes are traceable.
+- [ ] KPI formulas and denominator behavior are explicit.
+- [ ] Empty, stale, invalid, partial, and error states are accurate.
+- [ ] Automated tests cover normal, boundary, permission, and failure cases.
+- [ ] Reports reconcile to source records.
+- [ ] Accessibility and mobile paths are reviewed.
 - [ ] Documentation matches actual behavior.
-- [ ] Verification result is recorded as pass, fail, blocked, or not run.
+- [ ] Verification status is recorded as pass, fail, blocked, or not run.
 
-## Lightweight decision register
+## Open decisions
 
-Use this table to retain the reasoning behind material choices:
-
-| Decision | Current status | Evidence required to close |
+| Decision | Status | Evidence required |
 |---|---|---|
-| First target customer segment | OPEN | Practitioner interviews, workflow sample, buyer/user distinction, end-to-end trial |
-| First KPI release set | PROPOSED | Metric contracts plus independently reproducible test results |
-| Risk scoring methodology | OPEN | Organization-approved method and versioning plan |
-| Backend/database/authentication | UNKNOWN | Repository/runtime inspection and architecture decision |
-| Evidence storage and audit guarantees | UNKNOWN | Storage/access design plus tamper/retention tests |
-| Offline capture | OPEN | Target-user research and connectivity assumptions |
-| Legal/regulatory applicability | OPEN | Jurisdiction and competent local review |
-| Production readiness | NOT ESTABLISHED | Completion of Stage 6 with reproducible release evidence |
+| Production database and identity provider | OPEN | Architecture decision plus authorization and isolation test plan |
+| Evidence repository and retention | OPEN | Data classification, access model, retention and restore test |
+| Risk scoring method | OPEN | Approved model owner, versioning, validation examples |
+| Audit immutability level | OPEN | Threat model and tamper-detection/retention requirements |
+| First sector pack | DEFERRED | Core workflow evidence plus user discovery |
+| Production readiness | NOT ESTABLISHED | Stage 5 acceptance evidence |

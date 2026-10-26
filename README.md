@@ -1,25 +1,57 @@
-# Inspectra
+# Inspectra — Operational Assurance
 
-**Inspectra is being defined as an operational inspection and assurance platform**: a shared place to plan checks, record evidence, track risks and corrective actions, and help managers decide where intervention is needed.
+Inspectra is a sector-neutral foundation for planning inspections, managing findings and corrective actions, tracking risks and controls, and helping managers understand operational states from traceable records.
 
-> **Repository status (2026-10-25):** this repository was empty when the documentation baseline was established. The current contents define product direction and evidence requirements; they do not claim that an application, backend, integrations, tests, or production controls already exist.
+## Current repository state
 
-## Documentation
+The repository contains a browser-run core interface and domain-rule tests. The current workspace uses illustrative demo data stored in the current browser. It is not connected to a shared database, authentication provider, file repository, or live operating systems. Activity shown in this mode is not an immutable audit trail.
 
-- [Management metrics and product expansion plan](docs/management-measurement-and-expansion-plan.md) — KPI definitions, data requirements, recommended management modules, target sectors, and safeguards against misleading metrics.
-- [Implementation roadmap and acceptance checklist](docs/roadmap.md) — staged work, verification gates, and definition of done.
+Do not use the current demo workspace as the system of record for safety-critical or regulated operations.
+
+## Run locally
+
+Requires Node.js 22 or later. No third-party runtime packages are required for the current shell.
+
+- **npm run dev** — start the local static server at http://localhost:4173.
+- **npm test** — run domain-rule tests using Node's built-in test runner.
+- **npm run check** — run JavaScript syntax checks.
+
+## Shared core workspaces
+
+- Overview and measurement
+- Work queue
+- Inspections
+- Findings and corrective actions
+- Risk and controls
+- Sites and assets
+- Audit and compliance
+- People and suppliers
+- Reports
+- System health
+
+These are domain-neutral workflows, not sector-specific compliance packs. Industry templates and jurisdiction-specific rules should be added only after the reusable core has suitable data contracts, authorization, evidence handling, and verification.
 
 ## Product principles
 
-1. **Evidence before score.** Every KPI must expose its formula, denominator, period, data source, freshness, and limitations.
-2. **Action before decoration.** A metric should help someone identify a record, assign an owner, decide what to do, and verify closure.
-3. **Lead and lag together.** Track prevention activities and outcomes; do not use incident counts or any other single metric as a proxy for overall safety.
-4. **No silent missing data.** Unknown, stale, unconfigured, incomplete, and zero are different states.
-5. **One core, configurable domains.** Safety, quality, compliance, facilities, assets, contractors, and environmental workflows should reuse common records and permissions rather than become disconnected product forks.
-6. **Honest operating status.** Distinguish mock/sample data from live records, local storage from shared persistence, and event history from an immutable audit trail.
+1. Evidence before score: each KPI needs an explicit formula, denominator, period, provenance, freshness, and limitations.
+2. Action before decoration: exceptions should link to records, owners, next actions, and verification.
+3. State is not outcome: workflow status, checklist result, severity, risk, evidence state, and authorization state are separate concepts.
+4. Missing is not zero: unknown, stale, unconfigured, incomplete, unavailable, and zero are distinct states.
+5. Reuse the core: sector capabilities should configure shared entities and workflows rather than fork the product.
+6. Honest operating status: demo/local behavior must never be described as live, shared, independently verified, or production-ready.
 
-## Research basis
+## Documentation
 
-The plan draws on published guidance including ISO 45004:2024 on occupational health and safety performance evaluation, OSHA guidance on leading indicators and hazard identification, ISO 19011:2026 on auditing management systems, ISO 31000:2018 on risk management, ISO 37301:2021 on compliance management, ISO 55001:2024 on asset management, ISO 14001:2026 on environmental management, and the ISO 9001:2026 quality management edition. See the source list in the plan.
+- [Management measurement and product expansion plan](docs/management-measurement-and-expansion-plan.md)
+- [Core architecture](docs/core-architecture.md)
+- [Security and assurance model](docs/security-and-assurance-model.md)
+- [Implementation roadmap](docs/roadmap.md)
 
-These references inform product design; they do **not** imply Inspectra is certified, legally compliant in any jurisdiction, or a substitute for a competent compliance professional.
+## Research anchors
+
+Product measurements draw on ISO 45004:2024 performance-evaluation guidance and OSHA guidance on leading indicators and hazard identification. Security verification planning references OWASP ASVS 5.0.0. These references guide design and testing; they do not establish certification or legal compliance.
+
+- [ISO 45004:2024](https://www.iso.org/standard/64285.html)
+- [OSHA leading indicators](https://www.osha.gov/leading-indicators)
+- [OSHA hazard identification and assessment](https://www.osha.gov/safety-management/hazard-Identification/)
+- [OWASP ASVS 5.0.0](https://asvs.owasp.org/)
