@@ -5,6 +5,10 @@ import {
   toCsv, transitionInspection, verifyFinding
 } from "../src/domain.js";
 
+import {
+  createManagementFollowUp, startManagementReview, completeManagementReview
+} from "../src/domain.js";
+
 const at = (iso) => new Date(iso);
 const fixedNow = at("2026-10-26T12:00:00.000Z");
 
@@ -105,3 +109,35 @@ test("CSV output quotes values and neutralizes spreadsheet formula text", () => 
   assert.match(dangerous, /"'-CMD/);
   assert.match(dangerous, /"'@SUM/);
 });
+
+test("a management review must be scheduled before it can start", () => {
+  const review = { id: "MR-1", status: "completed", version: 2 };
+  assert.throws(() => startManagementReview(review, fixedNow), /scheduled review/i);
+  assert.equal(review.status, "completed");
+});
+
+test("a management review records its start, requires substantive minutes, then completes", () => {
+  const scheduled = { id: "MR-2", status: "scheduled", version: 1 };
+  const active = startManagementReview(scheduled, fixedNow);
+  assert.equal(active.status, "in_progress");
+  assert.equal(active.startedAt, fixedNow.toISOString());
+  assert.throws(() => completeManagementReview(active, "No issues", fixedNow), /20 characters/i);
+  const completed = completeManagementReview(active, "Reviewed risk movement, actions, owners and due dates for the current period.", fixedNow);
+  assert.equal(completed.status, "completed");
+  assert.equal(completed.completedAt, fixedNow.toISOString());
+  assert.equal(scheduled.status, "scheduled", "domain functions must not mutate input records");
+});
+
+test("management follow-ups require an active review, owner, title, due date and stable ID", () => {
+  const review = { id: "MR-3", status: "scheduled" };
+  assert.throws(() => createManagementFollowUp(review, { title: "Track issue", owner: "Maya", dueAt: fixedNow.toISOString() }, "ACT-1", fixedNow), /in-progress review/i);
+  const activeReview = { id: "MR-3", status: "in_progress" };
+  assert.throws(() => createManagementFollowUp(activeReview, { title: "Fix", owner: "Maya", dueAt: fixedNow.toISOString() }, "ACT-1", fixedNow), /at least 4 characters/i);
+  assert.throws(() => createManagementFollowUp(activeReview, { title: "Review decision", owner: "", dueAt: fixedNow.toISOString() }, "ACT-1", fixedNow), /owner is required/i);
+  const action = createManagementFollowUp(activeReview, { title: "Verify corrective progress", owner: "Maya Chen", priority: "High", dueAt: fixedNow.toISOString() }, "ACT-9", fixedNow);
+  assert.equal(action.sourceType, "management_review");
+  assert.equal(action.reviewId, "MR-3");
+  assert.equal(action.status, "open");
+  assert.equal(action.priority, "High");
+});
+

@@ -24,7 +24,8 @@ const navGroups = [
     { id: "risk", label: "Risk & controls", icon: "shield" },
     { id: "sites", label: "Sites & assets", icon: "building" },
     { id: "audits", label: "Audit & compliance", icon: "checklist" },
-    { id: "people", label: "People & suppliers", icon: "users" }
+    { id: "people", label: "People & suppliers", icon: "users" },
+    { id: "reviews", label: "Management reviews", icon: "checklist" }
   ]},
   { label: "INSIGHT & CONTROL", items: [
     { id: "reports", label: "Reports", icon: "chart" },
@@ -41,6 +42,7 @@ const pageMeta = {
   sites: ["Sites & assets", "Explore locations, equipment and linked work.", "OPERATIONAL STRUCTURE"],
   audits: ["Audit & compliance", "Coordinate audit activity and track requirements needing attention.", "ASSURANCE"],
   people: ["People & suppliers", "View demo role coverage and contractor credential states.", "READINESS"],
+  reviews: ["Management reviews", "Record review minutes, decisions, accountable owners and follow-up.", "GOVERNANCE & DECISIONS"],
   reports: ["Reports", "Export visible operational records and inspect metric definitions.", "EVIDENCE & REPORTING"],
   system: ["System health", "Understand what is connected, what is local and what is not configured.", "PLATFORM STATUS"]
 };
@@ -263,7 +265,7 @@ function renderQueue() {
     id: i.id, title: i.title, owner: i.owner, dueAt: i.dueAt, priority: i.priority, status: inspectionStatus(i), kind: "Inspection", target: "inspection"
   }));
   d.actions.filter((a) => !["resolved", "verified", "cancelled"].includes(a.status)).forEach((a) => workItems.push({
-    id: a.id, title: a.title, owner: a.owner, dueAt: a.dueAt, priority: a.priority, status: actionStatus(a), kind: "Corrective action", target: "action"
+    id: a.id, title: a.title, owner: a.owner, dueAt: a.dueAt, priority: a.priority, status: actionStatus(a), kind: a.reviewId ? "Management follow-up" : "Corrective action", target: "action"
   }));
   const filtered = applySearch(workItems).sort((a, b) => {
     const aLate = a.status === "overdue" || a.priority === "Critical" ? 0 : 1;
@@ -294,6 +296,7 @@ function renderInspections() {
 
 function renderFindings() {
   const d = currentData();
+  const correctiveActions = d.actions.filter((action) => !action.reviewId);
   const findings = applySearch(d.findings.slice().sort((a, b) => {
     const score = { critical: 0, high: 1, medium: 2, low: 3 };
     return (score[a.severity] ?? 5) - (score[b.severity] ?? 5);
@@ -304,8 +307,8 @@ function renderFindings() {
     '<div class="metric-grid">' +
     metricCard("Open findings", String(openFindings), "Records not yet verified or closed", "alert", openFindings ? "tone-warn" : "") +
     metricCard("Critical findings", String(d.findings.filter((f) => f.severity === "critical" && !["verified", "resolved", "dismissed"].includes(f.status)).length), "Unresolved critical severity", "shield", "tone-alert") +
-    metricCard("Open actions", String(d.actions.filter((a) => !["resolved", "verified", "cancelled"].includes(a.status)).length), "Actions awaiting completion", "inbox", "") +
-    metricCard("Overdue actions", String(d.actions.filter((a) => isActionOverdue(a)).length), "Based on due timestamp and current time", "clock", "tone-warn") +
+    metricCard("Open corrective actions", String(correctiveActions.filter((a) => !["resolved", "verified", "cancelled"].includes(a.status)).length), "Finding-linked actions awaiting completion", "inbox", "") +
+    metricCard("Overdue corrective actions", String(correctiveActions.filter((a) => isActionOverdue(a)).length), "Finding-linked actions past due", "clock", "tone-warn") +
     '</div>' +
     panel("Finding register", "Closure and effectiveness are distinct states",
       findings.length ? '<div class="table-wrap"><table><thead><tr><th>Finding</th><th>Severity</th><th>Site</th><th>Owner</th><th>Due date</th><th>Status</th><th></th></tr></thead><tbody>' +
@@ -313,7 +316,7 @@ function renderFindings() {
     '<div class="content-grid equal">' +
     panel("Corrective actions", "Open work and resolution status",
       '<div class="table-wrap"><table><thead><tr><th>Action</th><th>Owner</th><th>Due</th><th>Priority</th><th>Status</th><th></th></tr></thead><tbody>' +
-      applySearch(d.actions).map((a) => '<tr><td><div class="primary-cell">' + esc(a.title) + '</div><div class="secondary-cell">' + esc(a.id) + '</div></td><td>' + esc(a.owner) + '</td><td>' + dateCell(a.dueAt) + '</td><td>' + priorityPill(a.priority) + '</td><td>' + pill(actionStatus(a)) + '</td><td><button class="link-button" data-open-action="' + esc(a.id) + '">Open</button></td></tr>').join("") +
+      applySearch(correctiveActions).map((a) => '<tr><td><div class="primary-cell">' + esc(a.title) + '</div><div class="secondary-cell">' + esc(a.id) + '</div></td><td>' + esc(a.owner) + '</td><td>' + dateCell(a.dueAt) + '</td><td>' + priorityPill(a.priority) + '</td><td>' + pill(actionStatus(a)) + '</td><td><button class="link-button" data-open-action="' + esc(a.id) + '">Open</button></td></tr>').join("") +
       '</tbody></table></div>') +
     panel("Closure rule", "What the demo enforces",
       '<div class="panel-body"><div class="exception-list">' +
@@ -403,6 +406,44 @@ function renderPeople() {
     '</div><p class="footer-note">Displayed people are not authenticated identities. The app does not grant/revoke real access, verify qualifications, or decide site access.</p>';
 }
 
+
+function renderReviews() {
+  const d = currentData();
+  const reviews = applySearch(d.reviews.slice().sort((a, b) => new Date(b.scheduledAt) - new Date(a.scheduledAt)));
+  const completed = d.reviews.filter((r) => r.status === "completed").length;
+  const active = d.reviews.filter((r) => r.status === "in_progress").length;
+  const scheduled = d.reviews.filter((r) => r.status === "scheduled").length;
+  const openFollowUps = d.actions.filter((a) => a.reviewId && !["resolved", "verified", "cancelled"].includes(a.status)).length;
+  const overdueFollowUps = d.actions.filter((a) => a.reviewId && isActionOverdue(a)).length;
+  const rows = reviews.map((review) => {
+    const tasks = d.actions.filter((action) => (review.decisionActionIds || []).includes(action.id));
+    const openTasks = tasks.filter((action) => !["resolved", "verified", "cancelled"].includes(action.status)).length;
+    return '<tr><td><div class="primary-cell">' + esc(review.title) + '</div><div class="secondary-cell">' + esc(review.id + " · " + review.period) + '</div></td>' +
+      '<td>' + esc(review.chair || "Unassigned") + '</td><td>' + dateCell(review.scheduledAt) + '</td><td>' + pill(review.status) + '</td>' +
+      '<td>' + openTasks + ' open / ' + tasks.length + ' linked</td><td><button class="link-button" data-open-review="' + esc(review.id) + '">Open review ' + icon("arrow") + '</button></td></tr>';
+  }).join("");
+  return pageHeading("Management reviews", "Turn KPI signals and operational exceptions into recorded decisions and accountable follow-up.", "GOVERNANCE & DECISIONS",
+    '<button class="button button-primary" data-create-review>' + icon("plus") + ' Schedule review</button>') +
+    '<div class="metric-grid">' +
+    metricCard("Completed reviews", String(completed), "Records with saved review minutes", "check", "") +
+    metricCard("In progress", String(active), "Reviews currently being prepared or held", "clipboard", active ? "tone-warn" : "") +
+    metricCard("Scheduled", String(scheduled), "Future review sessions in the register", "calendar", "") +
+    metricCard("Overdue follow-ups", String(overdueFollowUps), openFollowUps + " open follow-ups from review decisions", "clock", overdueFollowUps ? "tone-alert" : "") +
+    '</div>' +
+    panel("Review register", "Each review keeps meeting state separate from the follow-up actions it creates",
+      rows ? '<div class="table-wrap"><table><thead><tr><th>Review</th><th>Chair</th><th>Scheduled</th><th>Status</th><th>Follow-ups</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' :
+        tableMessage(reviews), '<span class="pill">' + reviews.length + ' records</span>') +
+    '<div class="content-grid equal">' +
+    panel("Governance rules", "A review records decisions; follow-up tasks remain separate work items",
+      '<div class="panel-body"><div class="exception-list">' +
+      '<div class="exception-row"><div class="exception-copy"><div class="exception-title">Minutes before completion</div><div class="exception-meta">A review cannot be marked complete without a substantive summary of at least 20 characters.</div></div></div>' +
+      '<div class="exception-row"><div class="exception-copy"><div class="exception-title">Accountable follow-ups</div><div class="exception-meta">Each follow-up must have a title, owner, due date and priority. It also appears in the common work queue.</div></div></div>' +
+      '<div class="exception-row"><div class="exception-copy"><div class="exception-title">Decision is not implementation</div><div class="exception-meta">Completing the meeting does not close its follow-up tasks or prove effectiveness.</div></div></div>' +
+      '</div></div>') +
+    panel("Current system boundary", "What this review register represents",
+      '<div class="panel-body"><p class="page-subtitle">These are local sample records. Minutes and decisions are not shared, signed, or stored in an independently protected audit trail. Use the underlying records to test the workflow only.</p></div>') +
+    '</div>';
+}
 function renderReports() {
   const k = getKpis();
   const d = currentData();
@@ -410,6 +451,7 @@ function renderReports() {
     ["Inspection register", "Inspection status, owner, site, due time, checklist progress.", "inspections"],
     ["Findings and actions", "Severity, workflow state, owner, due time and closure notes.", "actions"],
     ["Risk register", "Risk assumptions, owners, review dates and controls.", "risks"],
+    ["Management reviews", "Review status, period, chair, minutes and open follow-ups.", "reviews"],
     ["KPI snapshot", "Formula-based current metrics with definitions and demo-data caveat.", "kpis"]
   ];
   return pageHeading("Reports", "Export current records and inspect the measurement basis.", "EVIDENCE & REPORTING") +
@@ -459,6 +501,7 @@ function renderPage() {
     case "sites": return renderSites();
     case "audits": return renderAudits();
     case "people": return renderPeople();
+    case "reviews": return renderReviews();
     case "reports": return renderReports();
     case "system": return renderSystem();
     default: return renderOverview();
@@ -561,12 +604,62 @@ function renderModal() {
       (!["verified", "resolved", "dismissed"].includes(finding.status) ? '<button class="button button-primary" type="button" data-verify-finding="' + esc(finding.id) + '"' + (allResolved ? "" : " disabled") + '>' + icon("check") + ' Verify effectiveness</button>' : ''), true);
   }
 
+
+  if (type === "create-review") {
+    const peopleOptions = d.people.map((p) => '<option>' + esc(p.name) + '</option>').join("");
+    return modalWrap("Schedule a management review", "Creates a local review record; no calendar invitation or notification is sent.",
+      '<form id="createReviewForm" data-form="create-review"><div class="form-grid">' +
+      '<div class="field full"><label for="reviewTitle">Review title *</label><input id="reviewTitle" name="title" maxlength="140" required placeholder="e.g. Monthly operational assurance review"></div>' +
+      '<div class="field"><label for="reviewPeriod">Reporting period *</label><input id="reviewPeriod" name="period" type="month" required></div>' +
+      '<div class="field"><label for="reviewDate">Scheduled date *</label><input id="reviewDate" name="scheduledDate" type="date" value="' + esc(dateInputAt(7)) + '" required></div>' +
+      '<div class="field full"><label for="reviewChair">Chair / accountable lead *</label><select id="reviewChair" name="chair" required>' + peopleOptions + '</select></div>' +
+      '</div><p class="field-note">The reporting period and meeting date are distinct. This record has no external calendar integration.</p>' +
+      '<div class="modal-footer modal-inline-footer"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("calendar") + ' Create review</button></div></form>', "", true);
+  }
+
+  if (type === "review-detail" || type === "add-review-follow-up" || type === "complete-review") {
+    const review = d.reviews.find((r) => r.id === modalState.id);
+    if (!review) return modalWrap("Review unavailable", "The review is not in the current browser workspace.", emptyState("Record not found", "Close this dialog and refresh the workspace."));
+    const tasks = d.actions.filter((a) => (review.decisionActionIds || []).includes(a.id));
+    if (type === "add-review-follow-up") {
+      if (review.status !== "in_progress") return modalWrap("Follow-up unavailable", "Only an in-progress review accepts follow-ups.", emptyState("Review is not in progress", "Start the review before recording decisions."));
+      return modalWrap("Record a management decision", review.id + " · " + review.title,
+        '<form id="reviewFollowUpForm" data-form="add-review-follow-up"><div class="form-grid">' +
+        '<div class="field full"><label for="reviewDecisionTitle">Decision / follow-up *</label><input id="reviewDecisionTitle" name="title" maxlength="160" minlength="4" required placeholder="State the outcome that must be delivered"></div>' +
+        '<div class="field"><label for="reviewDecisionOwner">Accountable owner *</label><select id="reviewDecisionOwner" name="owner" required>' + d.people.map((p) => '<option>' + esc(p.name) + '</option>').join("") + '</select></div>' +
+        '<div class="field"><label for="reviewDecisionDue">Due date *</label><input id="reviewDecisionDue" type="date" name="dueDate" value="' + esc(dateInputAt(5)) + '" required></div>' +
+        '<div class="field"><label for="reviewDecisionPriority">Priority</label><select id="reviewDecisionPriority" name="priority"><option>Critical</option><option>High</option><option selected>Medium</option><option>Low</option></select></div>' +
+        '</div><p class="field-note">The resulting task is added to the shared demo work queue. It is not sent to the named owner.</p>' +
+        '<div class="modal-footer modal-inline-footer"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("plus") + ' Record follow-up</button></div></form>', "", true);
+    }
+    if (type === "complete-review") {
+      return modalWrap("Complete management review", review.id + " · " + review.title,
+        '<div class="demo-banner">' + icon("info") + '<div><strong>Meeting completion does not close decisions</strong><p>Follow-up tasks remain open until each is separately resolved.</p></div></div>' +
+        '<form id="completeReviewForm" data-form="complete-review"><div class="field"><label for="reviewMinutes">Minutes and decisions *</label><textarea id="reviewMinutes" name="minutes" required minlength="20" placeholder="Summarize reviewed inputs, material decisions, owners, disagreements and next review needs.">' + esc(review.minutes || "") + '</textarea><div class="field-note">At least 20 characters. Avoid recording sensitive personal details in sample data.</div></div>' +
+        '<div class="modal-footer modal-inline-footer"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("check") + ' Complete review</button></div></form>', "", true);
+    }
+    const openTasks = tasks.filter((a) => !["resolved", "verified", "cancelled"].includes(a.status)).length;
+    let footer = '<button class="button" type="button" data-close-dialog>Close</button>';
+    if (review.status === "scheduled") footer += '<button class="button button-primary" type="button" data-start-review="' + esc(review.id) + '">' + icon("arrow") + ' Start review</button>';
+    if (review.status === "in_progress") footer += '<button class="button" type="button" data-add-review-follow-up="' + esc(review.id) + '">' + icon("plus") + ' Add follow-up</button><button class="button button-primary" type="button" data-complete-review="' + esc(review.id) + '">' + icon("check") + ' Complete review</button>';
+    return modalWrap(review.title, review.id + " · " + review.period + " · " + review.chair,
+      '<div class="modal-record-grid"><div><div class="modal-record-label">Meeting state</div>' + pill(review.status) + '</div>' +
+      '<div><div class="modal-record-label">Scheduled</div><div class="modal-record-value">' + esc(formatDateTime(review.scheduledAt)) + '</div></div>' +
+      '<div><div class="modal-record-label">Chair</div><div class="modal-record-value">' + esc(review.chair) + '</div></div>' +
+      '<div><div class="modal-record-label">Follow-ups open</div><div class="modal-record-value">' + openTasks + ' / ' + tasks.length + '</div></div></div>' +
+      '<div class="modal-section-title">Follow-up decisions</div>' +
+      (tasks.length ? '<div class="exception-list">' + tasks.map((task) => '<div class="exception-row"><div class="exception-copy"><div class="exception-title">' + esc(task.title) + '</div><div class="exception-meta">' + esc(task.id + " · " + task.owner + " · Due " + formatDate(task.dueAt, { year: true })) + '</div></div>' + pill(actionStatus(task)) + '<button class="link-button" data-open-action="' + esc(task.id) + '">Open</button></div>').join("") + '</div>' : emptyState("No follow-ups recorded", "Record a decision with an owner and due date while the review is in progress.")) +
+      (review.minutes ? '<div class="modal-section-title">Recorded minutes</div><p class="page-subtitle">' + esc(review.minutes) + '</p>' : '<p class="field-note top-space">Minutes have not yet been recorded.</p>') +
+      (review.completedAt ? '<p class="field-note top-space">Completed at ' + esc(formatDateTime(review.completedAt)) + '. Follow-up tasks remain separately tracked.</p>' : ''),
+      footer, true);
+  }
   if (type === "action-detail" || type === "close-action") {
     const action = d.actions.find((a) => a.id === modalState.id);
     if (!action) return modalWrap("Action unavailable", "", emptyState("Record not found", "Close this dialog and refresh the workspace."));
+    const isReviewFollowUp = Boolean(action.reviewId);
     if (type === "close-action") {
-      return modalWrap("Resolve corrective action", action.id + " · " + action.title,
-        '<div class="demo-banner">' + icon("info") + '<div><strong>Resolution is not effectiveness verification</strong><p>Explain what was done. A linked finding remains open until separately verified.</p></div></div>' +
+      return modalWrap(isReviewFollowUp ? "Resolve management follow-up" : "Resolve corrective action", action.id + " · " + action.title,
+        '<div class="demo-banner">' + icon("info") + '<div><strong>' + (isReviewFollowUp ? "Resolution is separate from review completion" : "Resolution is not effectiveness verification") + '</strong><p>' + (isReviewFollowUp ? "Record what was delivered. Completing the meeting does not close the follow-up." : "Explain what was done. A linked finding remains open until separately verified.") + '</p></div></div>' +
         '<form id="closeActionForm" data-form="close-action"><div class="field"><label for="resolutionNote">Resolution note *</label><textarea id="resolutionNote" name="note" required minlength="8" placeholder="Record the action taken and resulting state."></textarea><div class="field-note">At least 8 characters. Evidence uploads are not enabled.</div></div>' +
         '<div class="modal-footer modal-inline-footer"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("check") + ' Resolve action</button></div></form>', "", true);
     }
@@ -574,11 +667,12 @@ function renderModal() {
     return modalWrap(action.title, action.id + " · Corrective action",
       '<div class="modal-record-grid"><div><div class="modal-record-label">Status</div>' + pill(actionStatus(action)) + '</div><div><div class="modal-record-label">Priority</div>' + priorityPill(action.priority) + '</div>' +
       '<div><div class="modal-record-label">Owner</div><div class="modal-record-value">' + esc(action.owner) + '</div></div><div><div class="modal-record-label">Due date</div><div class="modal-record-value">' + esc(formatDateTime(action.dueAt)) + '</div></div></div>' +
-      '<div class="modal-section-title">Linked finding</div>' + (finding ? '<div class="exception-row"><div class="exception-copy"><div class="exception-title">' + esc(finding.title) + '</div><div class="exception-meta">' + esc(finding.id + " · " + displayStatus(finding.status)) + '</div></div><button class="link-button" data-open-finding="' + esc(finding.id) + '">Open finding</button></div>' : '<p class="page-subtitle">No linked finding.</p>') +
+      (finding ? '<div class="modal-section-title">Linked finding</div><div class="exception-row"><div class="exception-copy"><div class="exception-title">' + esc(finding.title) + '</div><div class="exception-meta">' + esc(finding.id + " · " + displayStatus(finding.status)) + '</div></div><button class="link-button" data-open-finding="' + esc(finding.id) + '">Open finding</button></div>' : '') +
+      (action.reviewId ? '<div class="modal-section-title">Source management review</div><div class="exception-row"><div class="exception-copy"><div class="exception-title">' + esc(currentData().reviews.find((r) => r.id === action.reviewId)?.title || "Review unavailable") + '</div><div class="exception-meta">' + esc(action.reviewId) + '</div></div><button class="link-button" data-open-review="' + esc(action.reviewId) + '">Open review</button></div>' : (!finding ? '<p class="page-subtitle">No linked finding.</p>' : '')) +
       (action.resolutionNote ? '<div class="modal-section-title">Resolution note</div><p class="page-subtitle">' + esc(action.resolutionNote) + '</p>' : '') +
       (action.resolvedAt ? '<p class="field-note">Resolved at ' + esc(formatDateTime(action.resolvedAt)) + '</p>' : ''),
       '<button class="button" type="button" data-close-dialog>Close</button>' +
-      (!["resolved", "verified", "cancelled"].includes(action.status) ? '<button class="button button-primary" type="button" data-close-action="' + esc(action.id) + '">' + icon("check") + ' Resolve action</button>' : ''), true);
+      (!["resolved", "verified", "cancelled"].includes(action.status) ? '<button class="button button-primary" type="button" data-close-action="' + esc(action.id) + '">' + icon("check") + (isReviewFollowUp ? ' Resolve follow-up' : ' Resolve action') + '</button>' : ''), true);
   }
   return "";
 }
@@ -628,12 +722,30 @@ function onClick(event) {
   if (target.closest("[data-close-dialog]")) { closeModal(); return; }
   if (target.closest("[data-create-inspection]")) { openModal("create-inspection"); return; }
   if (target.closest("[data-create-finding]")) { openModal("create-finding"); return; }
+  if (target.closest("[data-create-review]")) { openModal("create-review"); return; }
+  const openReviewButton = target.closest("[data-open-review]");
+  if (openReviewButton) { openModal("review-detail", openReviewButton.dataset.openReview); return; }
   const openInspectionButton = target.closest("[data-open-inspection]");
   if (openInspectionButton) { openModal("inspection-detail", openInspectionButton.dataset.openInspection); return; }
   const openFindingButton = target.closest("[data-open-finding]");
   if (openFindingButton) { openModal("finding-detail", openFindingButton.dataset.openFinding); return; }
   const openActionButton = target.closest("[data-open-action]");
   if (openActionButton) { openModal("action-detail", openActionButton.dataset.openAction); return; }
+  const startReviewButton = target.closest("[data-start-review]");
+  if (startReviewButton) {
+    const review = currentData().reviews.find((r) => r.id === startReviewButton.dataset.startReview);
+    try {
+      Object.assign(review, startManagementReview(review));
+      addActivity("started", "management_review", review.id, "Management review started: " + review.title);
+      modalState = { type: "review-detail", id: review.id };
+      persistAndRender("Management review started in the local demo.");
+    } catch (error) { showToast(error.message, true); render(); }
+    return;
+  }
+  const addReviewFollowUpButton = target.closest("[data-add-review-follow-up]");
+  if (addReviewFollowUpButton) { openModal("add-review-follow-up", addReviewFollowUpButton.dataset.addReviewFollowUp); return; }
+  const completeReviewButton = target.closest("[data-complete-review]");
+  if (completeReviewButton) { openModal("complete-review", completeReviewButton.dataset.completeReview); return; }
   const checkButton = target.closest("[data-check-item]");
   if (checkButton) {
     const inspection = currentData().inspections.find((i) => i.id === checkButton.dataset.inspectionId);
@@ -744,6 +856,56 @@ function createFinding(form) {
   persistAndRender("Finding saved" + (actionIds.length ? " with a linked corrective action." : "."));
 }
 
+
+function createManagementReview(form) {
+  const data = new FormData(form);
+  const title = String(data.get("title") || "").trim();
+  const period = String(data.get("period") || "");
+  const scheduledDate = String(data.get("scheduledDate") || "");
+  const chair = String(data.get("chair") || "").trim();
+  if (title.length < 5 || !/^\\d{4}-\\d{2}$/.test(period) || !scheduledDate || !chair) {
+    throw new Error("Complete the title, reporting period, scheduled date and chair.");
+  }
+  const scheduledAt = new Date(scheduledDate + "T10:00:00").toISOString();
+  const review = {
+    id: nextId("MR", currentData().reviews),
+    title, period, scheduledAt, chair, status: "scheduled",
+    decisionActionIds: [], minutes: "", version: 1, createdAt: new Date().toISOString()
+  };
+  currentData().reviews.unshift(review);
+  addActivity("created", "management_review", review.id, "Management review scheduled: " + review.title);
+  activePage = "reviews";
+  modalState = null;
+  persistAndRender("Management review scheduled in the local demo.");
+}
+
+function addManagementFollowUp(form) {
+  const data = new FormData(form);
+  const review = currentData().reviews.find((r) => r.id === modalState?.id);
+  const dueDate = String(data.get("dueDate") || "");
+  if (!dueDate) throw new Error("A follow-up due date is required.");
+  const followUp = createManagementFollowUp(review, {
+    title: data.get("title"),
+    owner: data.get("owner"),
+    priority: data.get("priority"),
+    dueAt: new Date(dueDate + "T17:00:00").toISOString()
+  }, nextId("ACT", currentData().actions));
+  currentData().actions.unshift(followUp);
+  review.decisionActionIds = [...(review.decisionActionIds || []), followUp.id];
+  review.version = (review.version || 1) + 1;
+  addActivity("created", "action", followUp.id, "Management follow-up recorded: " + followUp.title);
+  modalState = { type: "review-detail", id: review.id };
+  persistAndRender("Follow-up assigned in the local demo and added to the work queue.");
+}
+
+function finishManagementReview(form) {
+  const data = new FormData(form);
+  const review = currentData().reviews.find((r) => r.id === modalState?.id);
+  Object.assign(review, completeManagementReview(review, data.get("minutes")));
+  addActivity("completed", "management_review", review.id, "Management review completed with recorded minutes");
+  modalState = { type: "review-detail", id: review.id };
+  persistAndRender("Review minutes saved; follow-up tasks remain separately tracked.");
+}
 function finishAction(form) {
   const data = new FormData(form);
   const action = currentData().actions.find((a) => a.id === modalState?.id);
@@ -775,6 +937,9 @@ function onSubmit(event) {
   try {
     if (form.dataset.form === "create-inspection") createInspection(form);
     if (form.dataset.form === "create-finding") createFinding(form);
+    if (form.dataset.form === "create-review") createManagementReview(form);
+    if (form.dataset.form === "add-review-follow-up") addManagementFollowUp(form);
+    if (form.dataset.form === "complete-review") finishManagementReview(form);
     if (form.dataset.form === "close-action") finishAction(form);
     if (form.dataset.form === "verify-finding") finishFindingVerification(form);
   } catch (error) {
@@ -827,6 +992,15 @@ function exportData(kind) {
       { label: "Consequence (sample)", key: "consequence" }, { label: "Owner", key: "owner" },
       { label: "Status", key: "status" }, { label: "Control", key: "control" }
     ], d.risks.map((r) => ({ ...r, site: siteName(r.siteId) })));
+  } else if (kind === "reviews") {
+    csvDownload("inspectra-demo-management-reviews.csv", [
+      { label: "Review ID", key: "id" }, { label: "Title", key: "title" }, { label: "Period", key: "period" },
+      { label: "Scheduled at", key: "scheduledAt" }, { label: "Chair", key: "chair" }, { label: "Status", key: "status" },
+      { label: "Minutes", key: "minutes" }, { label: "Linked follow-ups", key: "followUps" }, { label: "Open follow-ups", key: "openFollowUps" }
+    ], d.reviews.map((review) => {
+      const linked = d.actions.filter((action) => (review.decisionActionIds || []).includes(action.id));
+      return { ...review, followUps: linked.length, openFollowUps: linked.filter((action) => !["resolved", "verified", "cancelled"].includes(action.status)).length };
+    }));
   } else {
     const k = getKpis();
     csvDownload("inspectra-demo-kpi-snapshot.csv", [

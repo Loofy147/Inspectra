@@ -64,7 +64,9 @@ export function createDemoState() {
     { id: "ACT-0301", title: "Secure and inspect the exit route", findingId: "FND-0201", owner: "Lina Moreau", priority: "Critical", openedAt: dateAt(-5, 10), dueAt: dateAt(-1, 17), status: "open", version: 1 },
     { id: "ACT-0302", title: "Verify guarding control and attach evidence", findingId: "FND-0202", owner: "Amir Haddad", priority: "High", openedAt: dateAt(-4, 10), dueAt: dateAt(2, 17), status: "in_progress", version: 2 },
     { id: "ACT-0303", title: "Replace and verify PPE signage", findingId: "FND-0203", owner: "Lina Moreau", priority: "Medium", openedAt: dateAt(-12, 10), dueAt: dateAt(-7, 17), resolvedAt: dateAt(-5, 12), resolutionNote: "Illustrative demo note: replacement installed and checked.", status: "resolved", version: 3 },
-    { id: "ACT-0304", title: "Inspect racking beam and record disposition", findingId: "FND-0204", owner: "Maya Chen", priority: "High", openedAt: dateAt(-2, 10), dueAt: dateAt(1, 17), status: "open", version: 1 }
+    { id: "ACT-0304", title: "Inspect racking beam and record disposition", findingId: "FND-0204", owner: "Maya Chen", priority: "High", openedAt: dateAt(-2, 10), dueAt: dateAt(1, 17), status: "open", version: 1 },
+    { id: "ACT-0305", title: "Carry forward the open risk-review decision", findingId: null, reviewId: "MR-001", sourceType: "management_review", owner: "Maya Chen", priority: "Medium", openedAt: dateAt(-12, 12), dueAt: dateAt(-2, 17), resolvedAt: dateAt(-3, 14), resolutionNote: "Illustrative demo note: decision follow-up was recorded as complete.", status: "resolved", version: 2 },
+    { id: "ACT-0306", title: "Confirm site owners for overdue inspection recovery", findingId: null, reviewId: "MR-002", sourceType: "management_review", owner: "Lina Moreau", priority: "High", openedAt: dateAt(-1, 12), dueAt: dateAt(2, 17), status: "open", version: 1 }
   ];
   const risks = [
     { id: "RSK-001", title: "Emergency-route obstruction", siteId: "SITE-003", category: "Emergency readiness", likelihood: 3, consequence: 5, owner: "Lina Moreau", status: "review_required", lastReviewedAt: dateAt(-45, 10), control: "Route inspection and obstruction-clearance procedure" },
@@ -76,6 +78,26 @@ export function createDemoState() {
     { id: "AUD-001", title: "Quarterly site assurance review", scope: "Sites and work areas", owner: "Maya Chen", dueAt: dateAt(4, 15), status: "scheduled", progress: "Not started" },
     { id: "AUD-002", title: "Controlled-document review", scope: "Procedures and templates", owner: "Samir Ali", dueAt: dateAt(-2, 15), status: "in_progress", progress: "Evidence review" },
     { id: "AUD-003", title: "Contractor onboarding sample", scope: "People and suppliers", owner: "Amir Haddad", dueAt: dateAt(9, 15), status: "scheduled", progress: "Not started" }
+  ];
+  const reviews = [
+    {
+      id: "MR-001", title: "Monthly operational assurance review", period: "2026-10",
+      scheduledAt: dateAt(-12, 10), startedAt: dateAt(-12, 10), completedAt: dateAt(-11, 11),
+      chair: "Maya Chen", status: "completed", decisionActionIds: ["ACT-0305"],
+      minutes: "Illustrative demo minutes: reviewed overdue work, assigned a recovery owner, and scheduled a follow-up check. This record is sample content.",
+      version: 2
+    },
+    {
+      id: "MR-002", title: "Current site assurance exception review", period: "2026-10",
+      scheduledAt: dateAt(-1, 10), startedAt: dateAt(-1, 10),
+      chair: "Lina Moreau", status: "in_progress", decisionActionIds: ["ACT-0306"],
+      minutes: "", version: 2
+    },
+    {
+      id: "MR-003", title: "Monthly control effectiveness review", period: "2026-11",
+      scheduledAt: dateAt(6, 10), chair: "Samir Ali", status: "scheduled",
+      decisionActionIds: [], minutes: "", version: 1
+    }
   ];
   const requirements = [
     { id: "REQ-001", title: "Inspection templates have an owner and revision", owner: "Samir Ali", status: "in_review", evidence: "Template register demo record" },
@@ -99,5 +121,5 @@ export function createDemoState() {
     { id: "EVT-003", at: dateAt(-2, 11), actor: "Demo operator", action: "resolved", entityType: "action", entityId: "ACT-0303", summary: "PPE signage action resolved (sample event)" },
     { id: "EVT-004", at: dateAt(-3, 10), actor: "Demo operator", action: "completed", entityType: "inspection", entityId: "INS-0101", summary: "Forklift pre-operation audit completed" }
   ];
-  return { sites, assets, inspections, findings, actions, risks, audits, requirements, people, contractors, activity };
+  return { sites, assets, inspections, findings, actions, risks, audits, requirements, people, contractors, reviews, activity };
 }

@@ -136,3 +136,55 @@ export function toCsv(columns, rows) {
   const body = (rows || []).map((row) => columns.map((column) => csvCell(row[column.key])).join(","));
   return [header, ...body].join("\r\n");
 }
+
+export function startManagementReview(review, now = new Date()) {
+  if (!review) throw new Error("Management review not found.");
+  if (review.status !== "scheduled") throw new Error("Only a scheduled review can be started.");
+  return {
+    ...review,
+    status: "in_progress",
+    startedAt: new Date(now).toISOString(),
+    version: (review.version || 1) + 1
+  };
+}
+
+export function completeManagementReview(review, minutes, now = new Date()) {
+  if (!review) throw new Error("Management review not found.");
+  if (review.status !== "in_progress") throw new Error("Only an in-progress review can be completed.");
+  const summary = String(minutes || "").trim();
+  if (summary.length < 20) throw new Error("Record review minutes of at least 20 characters.");
+  return {
+    ...review,
+    status: "completed",
+    completedAt: new Date(now).toISOString(),
+    minutes: summary,
+    version: (review.version || 1) + 1
+  };
+}
+
+export function createManagementFollowUp(review, input, id, now = new Date()) {
+  if (!review) throw new Error("Management review not found.");
+  if (review.status !== "in_progress") throw new Error("Follow-up decisions can only be added to an in-progress review.");
+  const title = String(input?.title || "").trim();
+  const owner = String(input?.owner || "").trim();
+  const dueAt = input?.dueAt;
+  const dueMs = dueAt ? new Date(dueAt).getTime() : NaN;
+  if (title.length < 4) throw new Error("Follow-up title must be at least 4 characters.");
+  if (!owner) throw new Error("A follow-up owner is required.");
+  if (!id || typeof id !== "string") throw new Error("A stable follow-up ID is required.");
+  if (!Number.isFinite(dueMs)) throw new Error("A valid follow-up due date is required.");
+  const createdAt = new Date(now).toISOString();
+  return {
+    id,
+    title,
+    reviewId: review.id,
+    sourceType: "management_review",
+    findingId: null,
+    owner,
+    priority: ["Critical", "High", "Medium", "Low"].includes(input?.priority) ? input.priority : "Medium",
+    openedAt: createdAt,
+    dueAt: new Date(dueMs).toISOString(),
+    status: "open",
+    version: 1
+  };
+}
