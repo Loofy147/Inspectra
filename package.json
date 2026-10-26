@@ -1,0 +1,15 @@
+{
+  "name": "inspectra-operational-assurance",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sector-neutral operational assurance core and demo interface",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "test": "node --test apps/web/test/*.test.mjs",
+    "check": "node --check apps/web/src/domain.js && node --check apps/web/src/seed.js && node --check apps/web/src/store.js && node --check apps/web/src/main.js && node --check scripts/serve.mjs"
+  }
+}
