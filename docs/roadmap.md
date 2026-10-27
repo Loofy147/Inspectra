@@ -25,6 +25,7 @@ A checklist item is complete only when a linked artifact or test exists and has 
 - [ ] One complete trace: plan → inspection → finding → action → evidence → effectiveness verification.
 - [x] Cross-register search with keyboard access, linked-site matching, and tests for core registers.
 - [x] Browser-local record-integrity diagnostics and pre-save checks for core creation flows, covered by domain tests.
+- [x] Metadata-only evidence references linked to operational records, with provenance, review states, register export, integrity checks and tests; managed file storage remains deferred.
 - [ ] Responsive, keyboard-usable work queue and record-detail flows.
 - [ ] Clear demo, local-only, empty, stale, incomplete, and error states.
 
