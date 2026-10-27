@@ -16,7 +16,7 @@ Do not infer production readiness from the UI working.
 
 1. **Experience layer** — executive dashboard, work queue, record lists/detail views, forms, reporting, accessibility, mobile capture.
 2. **Application workflows** — inspection lifecycle, finding triage, action closure, verification, risk review, audit work, management-review decisions.
-3. **Domain rules** — status transition validation, overdue semantics, required-check completion, metric formulas, relationship validation, and evidence-state rules.
+3. **Domain rules** — status transition validation, overdue semantics, required-check completion, metric formulas, record-integrity diagnostics (required fields, date formats, unique IDs, cross-record links), and evidence-state rules. Browser-side checks are defense-in-depth only; they do not replace server-side constraints.
 4. **Application services (target)** — authenticated commands and queries that validate authorization, enforce transaction boundaries, record events, and return source/freshness metadata.
 5. **Persistence and evidence (target)** — relational records, versioned templates, evidence metadata/content storage, event history, controlled retention and backup.
 6. **Integration adapters (target)** — import/export, source-of-truth mapping, idempotent sync, retry/dead-letter handling, and freshness/health reporting.
