@@ -980,10 +980,13 @@ function createAudit(form) {
   const audit = {
     id: nextId("AUD", currentData().audits),
     title, scope, criteria, owner,
-    dueAt: new Date(dueDate + "T15:00:00").toISOString(),
+    dueAt: dateAtLocalHour(dueDate, 15, "audit due date"),
     status: "scheduled", checklist: makeAuditChecklist(0),
     version: 1, createdAt: new Date().toISOString()
   };
+  assertCandidateIntegrity({ ...currentData(), audits: [audit, ...currentData().audits] }, [
+    { collection: "audits", id: audit.id }
+  ]);
   currentData().audits.unshift(audit);
   addActivity("created", "audit", audit.id, "Audit scheduled: " + audit.title);
   activePage = "audits";
@@ -1006,13 +1009,16 @@ function createInspection(form) {
   const owner = String(data.get("owner") || "").trim();
   const dueDate = String(data.get("dueDate") || "");
   if (!title || !siteId || !owner || !dueDate) throw new Error("Complete the required fields.");
-  const dueAt = new Date(dueDate + "T15:00:00").toISOString();
+  const dueAt = dateAtLocalHour(dueDate, 15, "inspection due date");
   const inspection = {
     id: nextId("INS", currentData().inspections),
     title, siteId, owner, priority: String(data.get("priority") || "Medium"),
     dueAt, createdAt: new Date().toISOString(), status: "scheduled",
     checklist: makeChecklist(0), version: 1
   };
+  assertCandidateIntegrity({ ...currentData(), inspections: [inspection, ...currentData().inspections] }, [
+    { collection: "inspections", id: inspection.id }
+  ]);
   currentData().inspections.unshift(inspection);
   addActivity("created", "inspection", inspection.id, "Inspection scheduled: " + inspection.title);
   activePage = "inspections";
@@ -1032,19 +1038,30 @@ function createFinding(form) {
     id: findingId, title, siteId, assetId: null,
     severity: String(data.get("severity") || "high"),
     status: "open", owner, openedAt: new Date().toISOString(),
-    dueAt: new Date(dueDate + "T17:00:00").toISOString(),
+    dueAt: dateAtLocalHour(dueDate, 17, "finding due date"),
     actionIds, description: String(data.get("description") || "").trim(), version: 1
   };
-  currentData().findings.unshift(finding);
+  let linkedAction = null;
   if (data.get("createAction") === "on") {
     const actionId = nextId("ACT", currentData().actions);
-    currentData().actions.unshift({
+    linkedAction = {
       id: actionId, title: "Investigate and address: " + title, findingId, owner,
       priority: finding.severity === "critical" ? "Critical" : finding.severity.charAt(0).toUpperCase() + finding.severity.slice(1),
       openedAt: new Date().toISOString(), dueAt: finding.dueAt, status: "open", version: 1
-    });
+    };
     actionIds.push(actionId);
   }
+  const candidate = {
+    ...currentData(),
+    findings: [finding, ...currentData().findings],
+    actions: linkedAction ? [linkedAction, ...currentData().actions] : currentData().actions
+  };
+  assertCandidateIntegrity(candidate, [
+    { collection: "findings", id: finding.id },
+    ...(linkedAction ? [{ collection: "actions", id: linkedAction.id }] : [])
+  ]);
+  currentData().findings.unshift(finding);
+  if (linkedAction) currentData().actions.unshift(linkedAction);
   addActivity("created", "finding", finding.id, "Finding logged: " + finding.title);
   activePage = "findings";
   modalState = null;
@@ -1061,12 +1078,16 @@ function createManagementReview(form) {
   if (title.length < 5 || !/^\\d{4}-\\d{2}$/.test(period) || !scheduledDate || !chair) {
     throw new Error("Complete the title, reporting period, scheduled date and chair.");
   }
-  const scheduledAt = new Date(scheduledDate + "T10:00:00").toISOString();
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) throw new Error("Choose a valid reporting month in YYYY-MM format.");
+  const scheduledAt = dateAtLocalHour(scheduledDate, 10, "management review date");
   const review = {
     id: nextId("MR", currentData().reviews),
     title, period, scheduledAt, chair, status: "scheduled",
     decisionActionIds: [], minutes: "", version: 1, createdAt: new Date().toISOString()
   };
+  assertCandidateIntegrity({ ...currentData(), reviews: [review, ...currentData().reviews] }, [
+    { collection: "reviews", id: review.id }
+  ]);
   currentData().reviews.unshift(review);
   addActivity("created", "management_review", review.id, "Management review scheduled: " + review.title);
   activePage = "reviews";
@@ -1083,10 +1104,19 @@ function addManagementFollowUp(form) {
     title: data.get("title"),
     owner: data.get("owner"),
     priority: data.get("priority"),
-    dueAt: new Date(dueDate + "T17:00:00").toISOString()
+    dueAt: dateAtLocalHour(dueDate, 17, "follow-up due date")
   }, nextId("ACT", currentData().actions));
+  const updatedReview = { ...review, decisionActionIds: [...(review.decisionActionIds || []), followUp.id] };
+  assertCandidateIntegrity({
+    ...currentData(),
+    actions: [followUp, ...currentData().actions],
+    reviews: currentData().reviews.map((item) => item.id === updatedReview.id ? updatedReview : item)
+  }, [
+    { collection: "actions", id: followUp.id },
+    { collection: "reviews", id: updatedReview.id }
+  ]);
   currentData().actions.unshift(followUp);
-  review.decisionActionIds = [...(review.decisionActionIds || []), followUp.id];
+  review.decisionActionIds = updatedReview.decisionActionIds;
   review.version = (review.version || 1) + 1;
   addActivity("created", "action", followUp.id, "Management follow-up recorded: " + followUp.title);
   modalState = { type: "review-detail", id: review.id };
