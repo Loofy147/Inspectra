@@ -138,6 +138,63 @@ function csvCell(value) {
   return '"' + text.replace(/"/g, '""') + '"';
 }
 
+
+const SEARCHABLE_COLLECTIONS = [
+  { key: "inspections", type: "Inspection", page: "inspections", openType: "inspection" },
+  { key: "findings", type: "Finding", page: "findings", openType: "finding" },
+  { key: "actions", type: "Corrective action", page: "findings", openType: "action" },
+  { key: "audits", type: "Audit", page: "audits", openType: "audit" },
+  { key: "reviews", type: "Management review", page: "reviews", openType: "review" },
+  { key: "sites", type: "Site", page: "sites", openType: null },
+  { key: "assets", type: "Asset", page: "sites", openType: null },
+  { key: "risks", type: "Risk", page: "risk", openType: null },
+  { key: "people", type: "Person", page: "people", openType: null },
+  { key: "suppliers", type: "Supplier", page: "people", openType: null }
+];
+
+function collectSearchText(value, output = [], seen = new Set()) {
+  if (typeof value === "string" || typeof value === "number") {
+    output.push(String(value));
+    return output;
+  }
+  if (!value || typeof value !== "object" || seen.has(value)) return output;
+  seen.add(value);
+  if (Array.isArray(value)) {
+    for (const item of value) collectSearchText(item, output, seen);
+  } else {
+    for (const item of Object.values(value)) collectSearchText(item, output, seen);
+  }
+  return output;
+}
+
+export function searchWorkspaceRecords(data, query) {
+  const needle = String(query || "").trim().toLocaleLowerCase();
+  if (!needle || !data || typeof data !== "object") return [];
+  const sitesById = new Map((Array.isArray(data.sites) ? data.sites : []).map((site) => [site.id, site.name]));
+  const matches = [];
+  for (const collection of SEARCHABLE_COLLECTIONS) {
+    const records = Array.isArray(data[collection.key]) ? data[collection.key] : [];
+    for (const record of records) {
+      const siteName = sitesById.get(record.siteId) || "";
+      const searchable = collectSearchText(record).concat(siteName).join(" ").toLocaleLowerCase();
+      if (!searchable.includes(needle)) continue;
+      matches.push({
+        type: collection.type,
+        page: collection.page,
+        openType: collection.openType,
+        id: String(record.id || record.name || collection.type),
+        title: String(record.title || record.name || record.id || collection.type),
+        owner: String(record.owner || record.manager || record.chair || ""),
+        status: String(record.status || ""),
+        dueAt: record.dueAt || record.nextCheckAt || "",
+        siteName,
+        record
+      });
+    }
+  }
+  return matches;
+}
+
 export function toCsv(columns, rows) {
   const header = columns.map((column) => csvCell(column.label)).join(",");
   const body = (rows || []).map((row) => columns.map((column) => csvCell(row[column.key])).join(","));
