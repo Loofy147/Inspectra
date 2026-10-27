@@ -104,7 +104,11 @@ test("workspace search finds records across registers and follows site relations
     inspections: [{ id: "INS-1", title: "Weekly inspection", siteId: "SITE-1", owner: "Maya", status: "scheduled" }],
     findings: [{ id: "FND-1", title: "Damaged guard", siteId: "SITE-1", status: "open" }],
     actions: [{ id: "ACT-1", title: "Replace guard", findingId: "FND-1", status: "open" }],
-    audits: [], reviews: [], assets: [], risks: [], people: [], suppliers: []
+    audits: [], reviews: [],
+    assets: [{ id: "AST-1", name: "Forklift FL-04", type: "Material handling" }],
+    risks: [], people: [],
+    contractors: [{ id: "CON-1", name: "North Mechanical Services", service: "Equipment inspection" }],
+    requirements: [{ id: "REQ-1", title: "Emergency lighting check", status: "open" }]
   };
   const siteMatches = searchWorkspaceRecords(data, "north distribution");
   assert.equal(siteMatches.length, 3, "a site search should match the site and records linked to it");
@@ -112,6 +116,9 @@ test("workspace search finds records across registers and follows site relations
   assert.equal(siteMatches[0].openType, "inspection");
   assert.equal(siteMatches[1].openType, "finding");
   assert.equal(siteMatches[2].page, "sites");
+  assert.equal(searchWorkspaceRecords(data, "forklift")[0].type, "Asset");
+  assert.equal(searchWorkspaceRecords(data, "mechanical services")[0].type, "Supplier / contractor");
+  assert.equal(searchWorkspaceRecords(data, "emergency lighting")[0].type, "Requirement");
   assert.equal(searchWorkspaceRecords(data, "  ").length, 0);
   assert.equal(searchWorkspaceRecords(data, "no such record").length, 0);
 });
