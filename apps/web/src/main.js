@@ -556,7 +556,7 @@ function renderSystem() {
     '<div class="section-spacer" aria-hidden="true"></div>' +
     panel("Local workspace diagnostics", "Current browser-local counts; a successful render is not a production-readiness check",
       '<div class="table-wrap"><table><thead><tr><th>Record family</th><th>Count</th><th>Storage / truth boundary</th></tr></thead><tbody>' +
-      [["Sites", d.sites.length], ["Assets", d.assets.length], ["Inspections", d.inspections.length], ["Findings", d.findings.length], ["Actions", d.actions.length], ["Risks", d.risks.length], ["Audit activities", d.audits.length], ["Activity items", d.activity.length]].map((r) => '<tr><td class="primary-cell">' + esc(r[0]) + '</td><td>' + r[1] + '</td><td>Current browser demo data</td></tr>').join("") +
+      [["Sites", d.sites.length], ["Assets", d.assets.length], ["Inspections", d.inspections.length], ["Findings", d.findings.length], ["Actions", d.actions.length], ["Evidence metadata", (d.evidence || []).length], ["Risks", d.risks.length], ["Audit activities", d.audits.length], ["Activity items", d.activity.length]].map((r) => '<tr><td class="primary-cell">' + esc(r[0]) + '</td><td>' + r[1] + '</td><td>Current browser demo data</td></tr>').join("") +
       '</tbody></table></div>') +
     '<p class="footer-note">Production readiness is NOT ESTABLISHED. No security assessment, tenant-isolation test, backup/restore exercise, live integration or evidence-storage verification has been performed by this demo interface.</p>';
 }
@@ -1425,7 +1425,18 @@ function csvDownload(fileName, columns, rows) {
 }
 function exportData(kind) {
   const d = currentData();
-  if (kind === "inspections") {
+  if (kind === "evidence") {
+    csvDownload("inspectra-demo-evidence-metadata.csv", [
+      { label: "Evidence ID", key: "id" }, { label: "Title", key: "title" },
+      { label: "Reference type", key: "evidenceType" }, { label: "Linked record type", key: "linkedEntityType" },
+      { label: "Linked record ID", key: "linkedEntityId" }, { label: "Captured at", key: "capturedAt" },
+      { label: "Captured by", key: "capturedBy" }, { label: "Origin and context", key: "sourceDescription" },
+      { label: "Source reference", key: "sourceReference" }, { label: "Storage mode", key: "storageMode" },
+      { label: "Review state", key: "reviewStatus" }, { label: "Review note", key: "reviewNote" },
+      { label: "Reviewed at", key: "reviewedAt" }, { label: "Reviewed by", key: "reviewedBy" },
+      { label: "Version", key: "version" }
+    ], d.evidence || []);
+  } else if (kind === "inspections") {
     csvDownload("inspectra-demo-inspections.csv", [
       { label: "ID", key: "id" }, { label: "Title", key: "title" }, { label: "Site", key: "site" },
       { label: "Owner", key: "owner" }, { label: "Due at", key: "dueAt" }, { label: "Status", key: "status" },
