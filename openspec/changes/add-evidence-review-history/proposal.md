@@ -41,7 +41,7 @@ A separate review-event collection will make the lifecycle visible and testable 
 
 Browser storage remains user-editable and device-local. The data can be cleared or altered by browser tools. A successful local save is not a server durability guarantee, identity verification, or regulated audit control. Existing records may have prior decisions for which no full event history exists.
 
-The cross-cutting [Production Readiness Checklist](../../../../docs/production-readiness-checklist.md) now defines separate release gates for identity, tenant isolation, trusted persistence, evidence/file storage, server-side audit history, reporting, security, recovery, accessibility and operations. Completing this prototype does not pass any production gate by itself. Overall production readiness remains NOT ESTABLISHED.
+The cross-cutting [Production Readiness Checklist](../../../docs/production-readiness-checklist.md) now defines separate release gates for identity, tenant isolation, trusted persistence, evidence/file storage, server-side audit history, reporting, security, recovery, accessibility and operations. Completing this prototype does not pass any production gate by itself. Overall production readiness remains NOT ESTABLISHED.
 
 ## HOS-CHANGE-SIGNATURE v1
 
