@@ -149,7 +149,7 @@ export function reviewEvidence(evidence, targetState, reviewNote, reviewer, now 
   const note = String(reviewNote || "").trim();
   const actor = String(reviewer || "").trim();
   if (note.length < 8) throw new Error("Add a review note of at least 8 characters.");
-  if (!actor) throw new Error("Select the person recording this review.");
+  if (!actor) throw new Error("Select a reviewer to record this review.");
   const at = new Date(now);
   if (!Number.isFinite(at.getTime())) throw new Error("A valid review timestamp is required.");
   return {
