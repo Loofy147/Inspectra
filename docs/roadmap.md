@@ -1,11 +1,13 @@
 # Inspectra Implementation Roadmap
 
 **Status:** Active build sequence for the professional sector-neutral core  
-**Prepared:** 2026-10-26
+**Prepared:** 2026-10-27
 
 The core must be built to a professional standard before market/sector selection becomes a development gate. Sector discovery can inform usability and configuration, but the shared platform foundation must not depend on one sector being chosen first.
 
-A checklist item is complete only when a linked artifact or test exists and has been verified.
+A checklist item is complete only when a linked artifact or test exists and has been verified. A completed prototype task is not automatically a production acceptance result.
+
+**Current production decision:** NOT ESTABLISHED. Use the [Production Readiness Checklist](production-readiness-checklist.md) as the cross-cutting release gate. The current browser-local shell is not an acceptable system of record for safety-critical or regulated operations.
 
 ## Stage 0 — Baseline and explicit boundaries
 
@@ -26,6 +28,7 @@ A checklist item is complete only when a linked artifact or test exists and has 
 - [x] Cross-register search with keyboard access, linked-site matching, and tests for core registers.
 - [x] Browser-local record-integrity diagnostics and pre-save checks for core creation flows, covered by domain tests.
 - [x] Metadata-only evidence references linked to operational records, with provenance, review states, register export, integrity checks and tests; managed file storage remains deferred.
+- [x] Browser-local evidence-review transition history captures each new valid state change, reviewer label, timestamp, rationale and version increment; legacy snapshots are migrated without fabricating historical events. This is not a tamper-proof or production audit log.
 - [ ] Responsive, keyboard-usable work queue and record-detail flows.
 - [ ] Clear demo, local-only, empty, stale, incomplete, and error states.
 
@@ -80,6 +83,20 @@ A checklist item is complete only when a linked artifact or test exists and has 
 
 **Acceptance gate:** release readiness is supported by reproducible security, reliability, access-control, recovery, and usability evidence.
 
+**Blocking release rule:** Stage 5 is not complete merely because its checklist has been read or documentation exists. All required items in the [Production Readiness Checklist](production-readiness-checklist.md) must have a PASS result and retained evidence, or a formally approved non-applicability decision. Critical authorization, tenant-isolation, data-integrity, evidence-access, security, recovery and owner-acceptance gaps block production use.
+
+## Production release decision (applies across Stages 0–5)
+
+- [ ] Record the exact release commit, build artifact, environment and intended user/data scope.
+- [ ] Complete required production checklist gates and retain direct evidence for each result.
+- [ ] Confirm no unresolved blocking defect, unauthorized exception, missing accountable owner or untested recovery path remains.
+- [ ] Independently review permissions/tenant isolation, evidence lifecycle, high-impact workflows, KPI correctness and export reconciliation.
+- [ ] Exercise backup restore, migration recovery, deployment rollback and critical alert delivery within the intended operating envelope.
+- [ ] Record the named GO / LIMITED PILOT / NO-GO decision, approved residual risks, expiry/recheck conditions and rollback triggers.
+- [ ] Verify the actual production deployment and critical postconditions after release; a successful deployment command alone is not acceptance.
+
+The detailed control-by-control checklist and release-decision template are in [production-readiness-checklist.md](production-readiness-checklist.md). Sector packs are optional extensions of the core; their presence does not compensate for an unmet core production gate.
+
 ## Stage 6 — Sector packs, standards and localization
 
 This stage follows the reusable core; sector validation is not the prerequisite for building the core.
@@ -94,6 +111,8 @@ This stage follows the reusable core; sector validation is not the prerequisite 
 Candidate packs: facilities/property, construction/contractors, manufacturing/warehousing, food operations, retail/hospitality, fleet/logistics, and specialist environments.
 
 ## Cross-cutting definition of done
+
+Each item below requires an observable verification result. For production claims, retain the source commit, target environment, check/run artifact, verification date, responsible reviewer and residual limitations. A passing local test alone does not satisfy a production gate.
 
 - [ ] The user problem and accountable role are named.
 - [ ] Workflow, state transitions, and invalid transitions are specified.
@@ -117,4 +136,4 @@ Candidate packs: facilities/property, construction/contractors, manufacturing/wa
 | Risk scoring method | OPEN | Approved model owner, versioning, validation examples |
 | Audit immutability level | OPEN | Threat model and tamper-detection/retention requirements |
 | First sector pack | DEFERRED | Core workflow evidence plus user discovery |
-| Production readiness | NOT ESTABLISHED | Stage 5 acceptance evidence |
+| Production readiness | NOT ESTABLISHED | All applicable gates in [production-readiness-checklist.md](production-readiness-checklist.md), exact release artifact, named approver and retained evidence |

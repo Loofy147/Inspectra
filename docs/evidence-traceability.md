@@ -3,6 +3,8 @@
 **Status:** Implemented browser-local metadata prototype; managed file storage is not implemented  
 **Scope:** Sector-neutral operational assurance core
 
+**Production gate:** This feature-specific checklist is necessary but not sufficient for release. The cross-cutting [Production Readiness Checklist](production-readiness-checklist.md) controls the overall release decision.
+
 ## Purpose
 
 An evidence reference records what a supporting item is, who recorded it, when it was captured, where it came from, which operational record it supports, and whether the reference has been reviewed.
@@ -34,7 +36,11 @@ The prototype links evidence references to inspections, findings, corrective act
 - **Accepted or Rejected → Superseded:** record why the reference is no longer the current reference.
 - Other transitions are rejected by the domain rule.
 
-The current UI permits review decisions and preserves the current decision metadata. Its local activity list is mutable and is not an immutable audit trail. A durable production implementation must preserve the full decision history as server-side events rather than relying on the current record fields alone.
+The current UI permits review decisions and preserves the latest decision metadata. The browser-local prototype now also records each new valid review transition in `evidenceReviewEvents`, including before/after states and versions, reviewer label, timestamp, rationale, and a `browser-local-demo` source marker. The history is displayed newest-first in evidence details and validated for event IDs, transitions, versions, required provenance, and evidence links.
+
+Seed history is explicitly illustrative. When an older snapshot lacks `evidenceReviewEvents`, migration creates an empty collection and does not reconstruct past events from the current evidence fields. A missing history therefore means no transitions are recorded in that snapshot; it does not prove that no earlier decision occurred.
+
+This remains browser-local state and is editable or removable by a user. The reviewer field is a label, not an authenticated identity. Neither the history view nor a stored event is an immutable or independently authenticated audit trail. A durable production implementation must preserve event history on a trusted server and define transactions, authorization, concurrency, retention, correction/redaction and tamper-detection controls.
 
 ## UX behavior
 
@@ -63,4 +69,4 @@ Before managed evidence storage is enabled, implementation must define and verif
 - Safe failure states for incomplete upload, retry, duplicate submission, unavailable storage, permission denial and malware rejection.
 - Tests proving tenant isolation, unauthorized denial, tamper detection where required, reproducible exports and recovery behavior.
 
-These are production requirements, not claims about current functionality.
+These are production requirements, not claims about current functionality. Passing the current browser-local evidence-history tests does not satisfy these gates; implementation evidence must come from the trusted production path and the exact release candidate.

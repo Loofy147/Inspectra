@@ -136,14 +136,16 @@ export function verifyFinding(finding, linkedActions, verificationNote, now = ne
 }
 
 
+function isAllowedEvidenceReviewTransition(fromState, toState) {
+  if (fromState === "pending_review") return ["accepted", "rejected"].includes(toState);
+  if (["accepted", "rejected"].includes(fromState)) return toState === "superseded";
+  return false;
+}
+
 export function reviewEvidence(evidence, targetState, reviewNote, reviewer, now = new Date()) {
   if (!evidence) throw new Error("Evidence record not found.");
   if (!EVIDENCE_REVIEW_STATES.has(targetState)) throw new Error("Choose a supported evidence review state.");
-  const current = evidence.reviewStatus;
-  const allowed = current === "pending_review"
-    ? ["accepted", "rejected"]
-    : (["accepted", "rejected"].includes(current) ? ["superseded"] : []);
-  if (!allowed.includes(targetState)) {
+  if (!isAllowedEvidenceReviewTransition(evidence.reviewStatus, targetState)) {
     throw new Error("This evidence review transition is not allowed.");
   }
   const note = String(reviewNote || "").trim();
@@ -160,6 +162,67 @@ export function reviewEvidence(evidence, targetState, reviewNote, reviewer, now 
     reviewedBy: actor,
     version: (evidence.version || 1) + 1
   };
+}
+
+export function createEvidenceReviewEvent(previousEvidence, updatedEvidence, eventId) {
+  if (!previousEvidence || !updatedEvidence) throw new Error("Both evidence versions are required.");
+  if (!isNonEmpty(eventId)) throw new Error("A stable evidence review event ID is required.");
+  if (previousEvidence.id !== updatedEvidence.id) throw new Error("An evidence review event cannot change evidence identity.");
+  if (!isAllowedEvidenceReviewTransition(previousEvidence.reviewStatus, updatedEvidence.reviewStatus)) {
+    throw new Error("The evidence review event describes an unsupported state transition.");
+  }
+  const fromVersion = previousEvidence.version || 1;
+  const toVersion = updatedEvidence.version || 1;
+  if (!Number.isInteger(fromVersion) || !Number.isInteger(toVersion) || toVersion !== fromVersion + 1) {
+    throw new Error("Evidence review event versions must describe exactly one version increment.");
+  }
+  const at = new Date(updatedEvidence.reviewedAt);
+  const reviewer = String(updatedEvidence.reviewedBy || "").trim();
+  const note = String(updatedEvidence.reviewNote || "").trim();
+  if (!Number.isFinite(at.getTime())) throw new Error("A valid review timestamp is required for the event.");
+  if (!reviewer) throw new Error("A reviewer is required for the event.");
+  if (note.length < 8) throw new Error("The event rationale must contain at least 8 characters.");
+  return {
+    id: String(eventId).trim(),
+    evidenceId: String(previousEvidence.id),
+    fromState: previousEvidence.reviewStatus,
+    toState: updatedEvidence.reviewStatus,
+    reviewedAt: at.toISOString(),
+    reviewedBy: reviewer,
+    reviewNote: note,
+    fromVersion,
+    toVersion,
+    source: "browser-local-demo"
+  };
+}
+
+export function recordEvidenceReviewTransition(data, evidenceId, targetState, reviewNote, reviewer, eventId, now = new Date()) {
+  if (!data || !Array.isArray(data.evidence)) throw new Error("Evidence register is unavailable.");
+  const previousEvidence = data.evidence.find((item) => item?.id === evidenceId);
+  if (!previousEvidence) throw new Error("Evidence record not found.");
+  if (data.evidenceReviewEvents !== undefined && !Array.isArray(data.evidenceReviewEvents)) {
+    throw new Error("Evidence review history is malformed; refusing to overwrite it.");
+  }
+  const updatedEvidence = reviewEvidence(previousEvidence, targetState, reviewNote, reviewer, now);
+  const event = createEvidenceReviewEvent(previousEvidence, updatedEvidence, eventId);
+  const existingEvents = data.evidenceReviewEvents || [];
+  const candidate = {
+    ...data,
+    evidence: data.evidence.map((item) => item.id === evidenceId ? updatedEvidence : item),
+    evidenceReviewEvents: [...existingEvents, event]
+  };
+
+  const validation = validateWorkspaceData(candidate);
+  const touched = new Set([
+    "evidence:" + String(evidenceId),
+    "evidenceReviewEvents:" + String(event.id)
+  ]);
+  const blocking = validation.issues.filter((issue) => touched.has(issue.collection + ":" + issue.recordId));
+  if (blocking.length) {
+    const details = blocking.slice(0, 3).map((issue) => issue.message);
+    throw new Error("This evidence review cannot be recorded. " + details.join(" "));
+  }
+  return { data: candidate, evidence: updatedEvidence, event };
 }
 
 function csvCell(value) {
@@ -188,6 +251,7 @@ const WORKSPACE_COLLECTION_RULES = {
   contractors: { label: "Supplier / contractor", page: "people", required: ["name", "service", "siteId", "credentialDueAt", "status"], dates: ["credentialDueAt"] },
   reviews: { label: "Management review", page: "reviews", required: ["title", "period", "scheduledAt", "chair", "status"], dates: ["scheduledAt", "startedAt", "completedAt", "createdAt"], arrays: ["decisionActionIds"] },
   evidence: { label: "Evidence record", page: "evidence", required: ["title", "evidenceType", "linkedEntityType", "linkedEntityId", "capturedAt", "capturedBy", "sourceDescription", "reviewStatus", "storageMode"], dates: ["capturedAt", "reviewedAt"] },
+  evidenceReviewEvents: { label: "Evidence review event", page: "evidence", required: ["evidenceId", "fromState", "toState", "reviewedAt", "reviewedBy", "reviewNote", "fromVersion", "toVersion", "source"], dates: ["reviewedAt"] },
   activity: { label: "Activity event", page: "system", required: ["at", "actor", "action", "entityType", "entityId", "summary"], dates: ["at"] }
 };
 
@@ -334,6 +398,31 @@ export function validateWorkspaceData(data) {
             "Record the reason for accepting, rejecting or superseding the reference.");
         }
       }
+      if (collection === "evidenceReviewEvents") {
+        if (!EVIDENCE_REVIEW_STATES.has(String(record.fromState || "")) ||
+            !EVIDENCE_REVIEW_STATES.has(String(record.toState || "")) ||
+            !isAllowedEvidenceReviewTransition(record.fromState, record.toState)) {
+          addIssue(collection, record, "invalid_evidence_review_event_transition", "fromState",
+            "The evidence review event records an unsupported state transition.",
+            "Use a transition allowed by the evidence review lifecycle.");
+        }
+        if (String(record.reviewNote || "").trim().length < 8) {
+          addIssue(collection, record, "short_evidence_review_event_note", "reviewNote",
+            "Evidence review event rationale must contain at least 8 characters.",
+            "Record the reason for the transition in the event.");
+        }
+        if (!Number.isInteger(record.fromVersion) || !Number.isInteger(record.toVersion) ||
+            record.fromVersion < 1 || record.toVersion !== record.fromVersion + 1) {
+          addIssue(collection, record, "invalid_evidence_review_event_version", "toVersion",
+            "Evidence review event versions must show one valid version increment.",
+            "Record the prior evidence version and exactly the resulting version.");
+        }
+        if (record.source !== "browser-local-demo") {
+          addIssue(collection, record, "invalid_evidence_review_event_source", "source",
+            "The current evidence review event source must identify the browser-local demo.",
+            "Use browser-local-demo until an authenticated server-side event source exists.");
+        }
+      }
       if (collection === "inspections" || collection === "audits") {
         if (Array.isArray(record.checklist)) {
           const seenChecks = new Set();
@@ -411,6 +500,16 @@ export function validateWorkspaceData(data) {
       addIssue("evidence", evidence, "broken_evidence_link", "linkedEntityId",
         "Evidence refers to a missing " + targetCollection.replaceAll("_", " ").replace(/s$/, "").replace("management_review", "management review") + " (" + evidence.linkedEntityId + ").",
         "Choose an existing record or restore the missing record before relying on this evidence reference.");
+    }
+  }
+
+  const evidenceMap = collectionMaps.get("evidence") || new Map();
+  for (const event of recordsByCollection.get("evidenceReviewEvents") || []) {
+    if (!event || typeof event !== "object" || !isNonEmpty(event.evidenceId)) continue;
+    if (!evidenceMap.has(String(event.evidenceId))) {
+      addIssue("evidenceReviewEvents", event, "broken_evidence_review_event_link", "evidenceId",
+        "Evidence review event refers to a missing evidence record (" + event.evidenceId + ").",
+        "Restore the referenced evidence record or repair the event link after reviewing the source data.");
     }
   }
 

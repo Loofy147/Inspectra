@@ -1,6 +1,6 @@
 # Inspectra Core Architecture
 
-**Status:** Target architecture and current-shell boundary, 2026-10-26
+**Status:** Target architecture and current-shell boundary, 2026-10-27
 
 ## Architectural goal
 
@@ -10,9 +10,15 @@ Build one reusable Operational Assurance core and configure domain packs on top 
 
 The current web shell is a dependency-free browser application. Domain rules live in ES modules and are testable with Node's built-in test runner. The current store uses browser local storage and seeded illustrative records. There is no production API, database connection, authentication, cross-user synchronization, document repository, or external system integration in this shell.
 
-The shell includes a metadata-only evidence register with provenance fields, links to current operational records, review-state validation, and CSV export. It does not upload or store evidence files, independently authenticate references, or provide durable review history. See [Evidence Traceability Model](evidence-traceability.md) for production acceptance gates.
+The shell includes a metadata-only evidence register with provenance fields, links to current operational records, review-state validation, CSV export, and browser-local evidence-review transition events. The history improves traceability within the current workspace snapshot but is editable/deletable, uses user-entered reviewer labels, and is not a durable or tamper-proof audit log. It does not upload/store evidence files or independently authenticate references. See [Evidence Traceability Model](evidence-traceability.md) for production acceptance gates.
 
 Do not infer production readiness from the UI working.
+
+## Production readiness status
+
+**NOT ESTABLISHED.** The current implementation is a browser-local prototype. The latest evidence-review-history code has a passing domain/syntax CI run, but there is no connected production API/database, authenticated identity, server-enforced authorization, shared persistence, managed evidence storage or independent production audit service in this shell. That CI result is scoped to the checks that ran.
+
+Use [Production Readiness Checklist](production-readiness-checklist.md) as the release gate. The logical layers below include target services, not claims that those services have been built. Production release remains blocked until all required gates for the intended scope have passing evidence and an accountable release decision.
 
 ## Logical layers
 
@@ -92,3 +98,4 @@ The final technology choices remain open until repository/runtime constraints an
 | Browser local storage for current demo | IMPLEMENTED FOR DEMO ONLY | Enables interaction without a backend; not suitable for shared or regulated records |
 | Production persistence/auth | OPEN | Choose after access, tenancy, evidence, retention and hosting needs are specified |
 | Immutable/tamper-evident audit guarantee | OPEN | Define threat model, controls and tests before making a guarantee |
+| Production release | NOT ESTABLISHED | Complete [production-readiness-checklist.md](production-readiness-checklist.md) with source-backed gate evidence and named approval |

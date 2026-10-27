@@ -8,17 +8,23 @@ function validWorkspace(value) {
     Array.isArray(value.data.sites) && Array.isArray(value.data.activity));
 }
 
+export function migrateWorkspaceData(data) {
+  return {
+    ...data,
+    evidence: Array.isArray(data?.evidence) ? data.evidence : [],
+    // Do not infer past transitions from mutable current review fields.
+    evidenceReviewEvents: Array.isArray(data?.evidenceReviewEvents) ? data.evidenceReviewEvents : []
+  };
+}
+
 export function loadWorkspace() {
   try {
     const stored = globalThis.localStorage?.getItem(STORAGE_KEY);
     if (!stored) return { data: createDemoState(), persistence: "browser-local", mode: "demo" };
     const parsed = JSON.parse(stored);
     if (!validWorkspace(parsed)) return { data: createDemoState(), persistence: "browser-local", mode: "demo" };
-    // Add the evidence register when loading an older local snapshot created before evidence metadata existed.
-    const migratedData = {
-      ...parsed.data,
-      evidence: Array.isArray(parsed.data.evidence) ? parsed.data.evidence : []
-    };
+    // Keep snapshots compatible without fabricating evidence review history that was never stored.
+    const migratedData = migrateWorkspaceData(parsed.data);
     return { ...parsed, data: migratedData, persistence: "browser-local", mode: "demo" };
   } catch {
     return { data: createDemoState(), persistence: "browser-local", mode: "demo" };
