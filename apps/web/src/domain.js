@@ -139,6 +139,268 @@ function csvCell(value) {
 }
 
 
+
+const WORKSPACE_COLLECTION_RULES = {
+  sites: { label: "Site", page: "sites", required: ["name"] },
+  assets: { label: "Asset", page: "sites", required: ["name", "siteId", "type", "criticality", "status"], dates: ["nextCheckAt"] },
+  inspections: { label: "Inspection", page: "inspections", required: ["title", "siteId", "owner", "dueAt", "status"], dates: ["dueAt", "createdAt", "startedAt", "completedAt"], arrays: ["checklist"] },
+  findings: { label: "Finding", page: "findings", required: ["title", "siteId", "owner", "severity", "status", "openedAt", "dueAt"], dates: ["openedAt", "dueAt", "verifiedAt"], arrays: ["actionIds"] },
+  actions: { label: "Corrective action", page: "findings", required: ["title", "owner", "openedAt", "dueAt", "status"], dates: ["openedAt", "dueAt", "resolvedAt"] },
+  risks: { label: "Risk", page: "risk", required: ["title", "siteId", "category", "owner", "status", "lastReviewedAt", "control"], dates: ["lastReviewedAt"] },
+  audits: { label: "Audit", page: "audits", required: ["title", "scope", "criteria", "owner", "dueAt", "status"], dates: ["dueAt", "startedAt", "completedAt"], arrays: ["checklist"] },
+  requirements: { label: "Requirement", page: "audits", required: ["title", "owner", "status", "evidence"] },
+  people: { label: "Person", page: "people", required: ["name", "role", "siteId", "status"] },
+  contractors: { label: "Supplier / contractor", page: "people", required: ["name", "service", "siteId", "credentialDueAt", "status"], dates: ["credentialDueAt"] },
+  reviews: { label: "Management review", page: "reviews", required: ["title", "period", "scheduledAt", "chair", "status"], dates: ["scheduledAt", "startedAt", "completedAt", "createdAt"], arrays: ["decisionActionIds"] },
+  activity: { label: "Activity event", page: "system", required: ["at", "actor", "action", "entityType", "entityId", "summary"], dates: ["at"] }
+};
+
+const WORKSPACE_RELATIONS = [
+  { collection: "assets", field: "siteId", target: "sites", required: true },
+  { collection: "inspections", field: "siteId", target: "sites", required: true },
+  { collection: "inspections", field: "assetId", target: "assets", required: false },
+  { collection: "findings", field: "siteId", target: "sites", required: true },
+  { collection: "findings", field: "assetId", target: "assets", required: false },
+  { collection: "risks", field: "siteId", target: "sites", required: true },
+  { collection: "people", field: "siteId", target: "sites", required: true },
+  { collection: "contractors", field: "siteId", target: "sites", required: true },
+  { collection: "actions", field: "findingId", target: "findings", required: false },
+  { collection: "actions", field: "reviewId", target: "reviews", required: false }
+];
+
+function isNonEmpty(value) {
+  return value !== null && value !== undefined && String(value).trim() !== "";
+}
+
+function isValidDateInput(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(value + "T00:00:00.000Z");
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+export function validateWorkspaceData(data) {
+  const issues = [];
+  const collections = Object.keys(WORKSPACE_COLLECTION_RULES);
+  const recordsByCollection = new Map();
+  const idsByCollection = new Map();
+  const globalIds = new Map();
+  let recordCount = 0;
+
+  const addIssue = (collection, record, code, field, message, recommendation) => {
+    const rule = WORKSPACE_COLLECTION_RULES[collection] || { label: collection, page: "system" };
+    issues.push({
+      code,
+      collection,
+      recordType: rule.label,
+      recordId: String(record?.id || "(missing ID)"),
+      field: field || "",
+      page: rule.page,
+      message,
+      recommendation
+    });
+  };
+
+  for (const collection of collections) {
+    const rows = data && Array.isArray(data[collection]) ? data[collection] : null;
+    recordsByCollection.set(collection, rows || []);
+    if (!rows) {
+      addIssue(collection, null, "invalid_collection", collection,
+        "The " + collection + " register is missing or is not a list.",
+        "Restore the register as a list before editing records.");
+      idsByCollection.set(collection, new Map());
+      continue;
+    }
+    const rule = WORKSPACE_COLLECTION_RULES[collection];
+    const ids = new Map();
+    idsByCollection.set(collection, ids);
+    for (const record of rows) {
+      recordCount += 1;
+      if (!record || typeof record !== "object" || Array.isArray(record)) {
+        addIssue(collection, null, "invalid_record", "", "A record is not a valid object.",
+          "Restore the record fields or remove the malformed sample entry.");
+        continue;
+      }
+      if (!isNonEmpty(record.id)) {
+        addIssue(collection, record, "missing_id", "id", rule.label + " has no stable ID.",
+          "Assign a unique ID before using this record.");
+      } else {
+        const id = String(record.id).trim();
+        if (ids.has(id)) {
+          addIssue(collection, record, "duplicate_id", "id", "ID " + id + " is duplicated in the " + rule.label.toLowerCase() + " register.",
+            "Give this record a new unique ID and update any linked references.");
+        } else {
+          ids.set(id, record);
+        }
+        if (globalIds.has(id)) {
+          const first = globalIds.get(id);
+          addIssue(collection, record, "duplicate_global_id", "id", "ID " + id + " is already used by a " + first.label.toLowerCase() + ".",
+            "Use a unique ID across record types and repair links that depend on it.");
+        } else {
+          globalIds.set(id, { collection, label: rule.label });
+        }
+      }
+      for (const field of rule.required || []) {
+        if (!isNonEmpty(record[field])) {
+          addIssue(collection, record, "missing_required_field", field,
+            rule.label + " is missing " + field + ".",
+            "Enter a value for " + field + " and save the record again.");
+        }
+      }
+      for (const field of rule.dates || []) {
+        if (record[field] === null || record[field] === undefined || record[field] === "") continue;
+        if (!Number.isFinite(time(record[field]))) {
+          addIssue(collection, record, "invalid_date", field,
+            rule.label + " has an invalid " + field + " date.",
+            "Enter a real date and time, then save the record again.");
+        }
+      }
+      for (const field of rule.arrays || []) {
+        if (!Array.isArray(record[field])) {
+          addIssue(collection, record, "invalid_list", field,
+            rule.label + " must contain a " + field + " list.",
+            "Restore the list before adding or changing linked items.");
+        }
+      }
+      if (collection === "reviews" && isNonEmpty(record.period) && !/^\d{4}-(0[1-9]|1[0-2])$/.test(String(record.period))) {
+        addIssue(collection, record, "invalid_period", "period", "Management review period must use YYYY-MM.",
+          "Choose a valid calendar month, for example 2026-10.");
+      }
+      if (collection === "inspections" || collection === "audits") {
+        if (Array.isArray(record.checklist)) {
+          const seenChecks = new Set();
+          record.checklist.forEach((check, index) => {
+            const location = "checklist[" + (index + 1) + "]";
+            if (!check || typeof check !== "object") {
+              addIssue(collection, record, "invalid_checklist_item", "checklist", location + " is malformed.",
+                "Restore the checklist item or recreate the checklist.");
+              return;
+            }
+            if (!isNonEmpty(check.id) || !isNonEmpty(check.label)) {
+              addIssue(collection, record, "incomplete_checklist_item", "checklist", location + " is missing an ID or label.",
+                "Give each checklist item a stable ID and a descriptive label.");
+            }
+            if (isNonEmpty(check.id) && seenChecks.has(String(check.id))) {
+              addIssue(collection, record, "duplicate_checklist_id", "checklist", location + " repeats checklist ID " + check.id + ".",
+                "Make each checklist item ID unique within this record.");
+            }
+            if (isNonEmpty(check.id)) seenChecks.add(String(check.id));
+            if (!["open", "done", "not_applicable"].includes(check.status)) {
+              addIssue(collection, record, "invalid_checklist_state", "checklist",
+                location + " has an unsupported state.",
+                "Use Open, Done or Not applicable for checklist state.");
+            }
+          });
+        }
+      }
+    }
+  }
+
+  const collectionMaps = new Map();
+  for (const collection of collections) {
+    collectionMaps.set(collection, new Map((recordsByCollection.get(collection) || [])
+      .filter((record) => record && typeof record === "object" && isNonEmpty(record.id))
+      .map((record) => [String(record.id), record])));
+  }
+
+  for (const relation of WORKSPACE_RELATIONS) {
+    const rows = recordsByCollection.get(relation.collection) || [];
+    const targets = collectionMaps.get(relation.target) || new Map();
+    for (const record of rows) {
+      if (!record || typeof record !== "object") continue;
+      const value = record[relation.field];
+      if (!isNonEmpty(value)) {
+        if (relation.required) addIssue(relation.collection, record, "missing_relation", relation.field,
+          WORKSPACE_COLLECTION_RULES[relation.collection].label + " references no " + WORKSPACE_COLLECTION_RULES[relation.target].label.toLowerCase() + ".",
+          "Choose an existing " + WORKSPACE_COLLECTION_RULES[relation.target].label.toLowerCase() + " record.");
+        continue;
+      }
+      const target = targets.get(String(value));
+      if (!target) {
+        addIssue(relation.collection, record, "broken_relation", relation.field,
+          relation.field + " refers to a missing " + WORKSPACE_COLLECTION_RULES[relation.target].label.toLowerCase() + " (" + value + ").",
+          "Select a record that exists in the " + relation.target + " register or restore the missing linked record.");
+        continue;
+      }
+      if (relation.field === "assetId" && record.siteId && target.siteId && record.siteId !== target.siteId) {
+        addIssue(relation.collection, record, "site_asset_mismatch", relation.field,
+          "The linked asset belongs to a different site than this " + WORKSPACE_COLLECTION_RULES[relation.collection].label.toLowerCase() + ".",
+          "Choose an asset from the same site or correct the site assignment.");
+      }
+    }
+  }
+
+  for (const finding of recordsByCollection.get("findings") || []) {
+    if (!finding || typeof finding !== "object" || !Array.isArray(finding.actionIds)) continue;
+    const actionMap = collectionMaps.get("actions") || new Map();
+    for (const actionId of finding.actionIds) {
+      const action = actionMap.get(String(actionId));
+      if (!action) {
+        addIssue("findings", finding, "broken_action_link", "actionIds",
+          "The finding links to a missing corrective action (" + actionId + ").",
+          "Restore the action or remove the stale link after confirming the relationship.");
+      } else if (action.findingId !== finding.id) {
+        addIssue("findings", finding, "inconsistent_action_link", "actionIds",
+          "The linked action does not point back to this finding.",
+          "Correct the finding/action links so both records reference one another.");
+      }
+    }
+  }
+
+  for (const review of recordsByCollection.get("reviews") || []) {
+    if (!review || typeof review !== "object" || !Array.isArray(review.decisionActionIds)) continue;
+    const actionMap = collectionMaps.get("actions") || new Map();
+    for (const actionId of review.decisionActionIds) {
+      const action = actionMap.get(String(actionId));
+      if (!action) {
+        addIssue("reviews", review, "broken_follow_up_link", "decisionActionIds",
+          "The review links to a missing follow-up action (" + actionId + ").",
+          "Restore the action or remove the stale link after confirming the review decision.");
+      } else if (action.reviewId && action.reviewId !== review.id) {
+        addIssue("reviews", review, "inconsistent_follow_up_link", "decisionActionIds",
+          "The linked action points to a different management review.",
+          "Correct the review/action links so both records reference the same review.");
+      }
+    }
+  }
+
+  const entityCollections = {
+    site: "sites", asset: "assets", inspection: "inspections", finding: "findings", action: "actions",
+    risk: "risks", audit: "audits", requirement: "requirements", person: "people",
+    contractor: "contractors", supplier: "contractors", management_review: "reviews", review: "reviews"
+  };
+  const activity = recordsByCollection.get("activity") || [];
+  for (const event of activity) {
+    if (!event || typeof event !== "object" || !entityCollections[event.entityType]) continue;
+    const targetMap = collectionMaps.get(entityCollections[event.entityType]) || new Map();
+    if (!targetMap.has(String(event.entityId))) {
+      addIssue("activity", event, "broken_activity_link", "entityId",
+        "This activity event refers to a missing " + WORKSPACE_COLLECTION_RULES[entityCollections[event.entityType]].label.toLowerCase() + " (" + event.entityId + ").",
+        "Restore the referenced record or mark the historical event as referring to an archived record.");
+    }
+  }
+
+  return {
+    recordCount,
+    issueCount: issues.length,
+    valid: issues.length === 0,
+    issues,
+    byCode: issues.reduce((counts, issue) => {
+      counts[issue.code] = (counts[issue.code] || 0) + 1;
+      return counts;
+    }, {})
+  };
+}
+
+export function isValidDateInput(value) {
+  return isValidDateInputValue(value);
+}
+
+function isValidDateInputValue(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(value + "T00:00:00.000Z");
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
 const SEARCHABLE_COLLECTIONS = [
   { key: "inspections", type: "Inspection", page: "inspections", openType: "inspection" },
   { key: "findings", type: "Finding", page: "findings", openType: "finding" },
