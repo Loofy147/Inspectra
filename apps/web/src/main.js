@@ -561,6 +561,75 @@ function renderSystem() {
     '<p class="footer-note">Production readiness is NOT ESTABLISHED. No security assessment, tenant-isolation test, backup/restore exercise, live integration or evidence-storage verification has been performed by this demo interface.</p>';
 }
 
+
+const evidenceEntityConfig = {
+  inspection: { collection: "inspections", label: "Inspection", page: "inspections", openType: "inspection" },
+  finding: { collection: "findings", label: "Finding", page: "findings", openType: "finding" },
+  action: { collection: "actions", label: "Corrective action", page: "findings", openType: "action" },
+  audit: { collection: "audits", label: "Audit", page: "audits", openType: "audit" },
+  management_review: { collection: "reviews", label: "Management review", page: "reviews", openType: "review" },
+  site: { collection: "sites", label: "Site", page: "sites", openType: null },
+  asset: { collection: "assets", label: "Asset", page: "sites", openType: null },
+  risk: { collection: "risks", label: "Risk", page: "risk", openType: null },
+  contractor: { collection: "contractors", label: "Supplier / contractor", page: "people", openType: null }
+};
+
+function evidenceTarget(evidence) {
+  const config = evidenceEntityConfig[evidence?.linkedEntityType];
+  if (!config) return { config: null, record: null, title: "Unsupported record type" };
+  const record = (currentData()[config.collection] || []).find((item) => item.id === evidence.linkedEntityId);
+  return { config, record, title: record ? (record.title || record.name || record.id) : "Linked record missing" };
+}
+
+function evidenceTargetButton(evidence, label = "Open linked record") {
+  const target = evidenceTarget(evidence);
+  if (!target.config || !target.record) return '<span class="secondary-cell">Linked record unavailable</span>';
+  if (target.config.openType) {
+    return '<button class="link-button" type="button" data-open-' + esc(target.config.openType) + '="' + esc(target.record.id) + '">' + esc(label) + ' ' + icon("arrow") + '</button>';
+  }
+  return '<button class="link-button" type="button" data-page="' + esc(target.config.page) + '">' + esc(label) + ' ' + icon("arrow") + '</button>';
+}
+
+function evidenceTypeLabel(value) {
+  const labels = {
+    document_reference: "Document reference",
+    photo_note: "Photo reference / note",
+    inspection_note: "Inspection note",
+    measurement_note: "Measurement note",
+    external_reference: "External reference"
+  };
+  return labels[value] || displayStatus(value);
+}
+
+function renderEvidence() {
+  const d = currentData();
+  const records = applySearch((d.evidence || []).slice().sort((a, b) => new Date(b.capturedAt) - new Date(a.capturedAt)));
+  const pending = (d.evidence || []).filter((item) => item.reviewStatus === "pending_review").length;
+  const accepted = (d.evidence || []).filter((item) => item.reviewStatus === "accepted").length;
+  const rejected = (d.evidence || []).filter((item) => item.reviewStatus === "rejected").length;
+  const rows = records.map((item) => {
+    const target = evidenceTarget(item);
+    return '<tr><td><div class="primary-cell">' + esc(item.title) + '</div><div class="secondary-cell">' + esc(item.id + " · " + evidenceTypeLabel(item.evidenceType)) + '</div></td>' +
+      '<td><div class="primary-cell">' + esc(target.title) + '</div><div class="secondary-cell">' + esc(target.config?.label || item.linkedEntityType) + ' · ' + esc(item.linkedEntityId) + '</div></td>' +
+      '<td>' + esc(formatDate(item.capturedAt, { year: true })) + '</td><td>' + esc(item.capturedBy || "Not recorded") + '</td>' +
+      '<td>' + pill(item.reviewStatus) + '</td><td>' + esc(item.sourceReference || "No reference ID") + '</td>' +
+      '<td><button class="link-button" type="button" data-open-evidence="' + esc(item.id) + '">Review metadata ' + icon("arrow") + '</button></td></tr>';
+  }).join("");
+  return pageHeading("Evidence", "Record what a reference is, where it came from, what it relates to, and whether it has been reviewed.", "EVIDENCE TRACEABILITY",
+    '<button class="button" type="button" data-export="evidence">' + icon("download") + ' Export register</button>' +
+    '<button class="button button-primary" type="button" data-create-evidence>' + icon("plus") + ' Record evidence</button>') +
+    '<div class="metric-grid">' +
+    metricCard("Metadata records", String((d.evidence || []).length), "Evidence descriptions and references only", "file", "") +
+    metricCard("Pending review", String(pending), "Not yet accepted or rejected", "clock", pending ? "tone-warn" : "") +
+    metricCard("Accepted references", String(accepted), "Review decision recorded with rationale", "check", "") +
+    metricCard("Rejected references", String(rejected), "Review decision requires follow-up", "alert", rejected ? "tone-alert" : "") +
+    '</div>' +
+    panel("Evidence register", "Every entry links to one operational record and keeps provenance separate from review status",
+      records.length ? '<div class="table-wrap"><table><thead><tr><th>Evidence reference</th><th>Linked record</th><th>Captured</th><th>Recorded by</th><th>Review state</th><th>Source reference</th><th></th></tr></thead><tbody>' +
+      rows + '</tbody></table></div>' : emptyState("No evidence references found", searchQuery ? "Try another search term." : "Record an evidence reference to describe a note, document reference, photo reference or measurement. This demo does not upload files.")) +
+    '<p class="footer-note">Evidence status is not proof of authenticity. Accepted means a demo reviewer recorded a decision about the reference metadata; it does not mean Inspectra stored or independently verified the underlying file.</p>';
+}
+
 function renderSearchResults() {
   const results = searchWorkspaceRecords(currentData(), searchQuery);
   const actionFor = (item) => {
@@ -585,6 +654,7 @@ function renderPage() {
     case "queue": return renderQueue();
     case "inspections": return renderInspections();
     case "findings": return renderFindings();
+    case "evidence": return renderEvidence();
     case "risk": return renderRisk();
     case "sites": return renderSites();
     case "audits": return renderAudits();
