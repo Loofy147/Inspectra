@@ -539,12 +539,22 @@ export function searchWorkspaceRecords(data, query) {
   const needle = String(query || "").trim().toLocaleLowerCase();
   if (!needle || !data || typeof data !== "object") return [];
   const sitesById = new Map((Array.isArray(data.sites) ? data.sites : []).map((site) => [site.id, site.name]));
+  const linkedCollections = {
+    inspection: "inspections", finding: "findings", action: "actions", audit: "audits",
+    management_review: "reviews", site: "sites", asset: "assets", risk: "risks", contractor: "contractors"
+  };
   const matches = [];
   for (const collection of SEARCHABLE_COLLECTIONS) {
     const records = Array.isArray(data[collection.key]) ? data[collection.key] : [];
     for (const record of records) {
       const siteName = sitesById.get(record.siteId) || "";
-      const searchable = collectSearchText(record).concat(siteName).join(" ").toLocaleLowerCase();
+      const linkedCollection = linkedCollections[record.linkedEntityType];
+      const linkedRecord = linkedCollection
+        ? (Array.isArray(data[linkedCollection]) ? data[linkedCollection] : []).find((item) => item.id === record.linkedEntityId)
+        : null;
+      const linkedSiteName = linkedRecord?.siteId ? (sitesById.get(linkedRecord.siteId) || "") : "";
+      const linkedText = linkedRecord ? collectSearchText(linkedRecord) : [];
+      const searchable = collectSearchText(record).concat(siteName, linkedSiteName, linkedText).join(" ").toLocaleLowerCase();
       if (!searchable.includes(needle)) continue;
       matches.push({
         type: collection.type,
