@@ -16,6 +16,15 @@ Requires Node.js 22 or later. No third-party runtime packages are required for t
 - **npm test** — run domain-rule tests using Node's built-in test runner.
 - **npm run check** — run JavaScript syntax checks.
 
+## Find records quickly
+
+- Press **Ctrl+K** on Windows/Linux or **Cmd+K** on macOS to focus workspace search.
+- Search across inspections, findings, corrective actions, audits, management reviews, sites, assets, risks, people, suppliers/contractors, and requirements.
+- Search matches record IDs and available text fields, including the linked site name where recorded. Open supported records directly from the results.
+- Press **Escape** to clear/leave the active search view.
+
+Search only covers the current browser-local demo dataset. It does not search other users' devices, external systems, or a shared production database.
+
 ## Shared core workspaces
 
 - Overview and measurement
