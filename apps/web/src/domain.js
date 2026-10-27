@@ -149,7 +149,8 @@ const SEARCHABLE_COLLECTIONS = [
   { key: "assets", type: "Asset", page: "sites", openType: null },
   { key: "risks", type: "Risk", page: "risk", openType: null },
   { key: "people", type: "Person", page: "people", openType: null },
-  { key: "suppliers", type: "Supplier", page: "people", openType: null }
+  { key: "contractors", type: "Supplier / contractor", page: "people", openType: null },
+  { key: "requirements", type: "Requirement", page: "audits", openType: null }
 ];
 
 function collectSearchText(value, output = [], seen = new Set()) {
