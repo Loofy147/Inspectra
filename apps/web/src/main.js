@@ -1,6 +1,7 @@
 import {
   calculateKpis, closeAction, isActionOverdue, isAuditOverdue, isInspectionOverdue,
-  searchWorkspaceRecords, toCsv, transitionAudit, transitionInspection, verifyFinding
+  isValidDateInput, searchWorkspaceRecords, toCsv, transitionAudit, transitionInspection,
+  validateWorkspaceData, verifyFinding
 } from "./domain.js";
 import { createDemoState, dateInputAt, dateAt, makeChecklist } from "./seed.js";
 import { loadWorkspace, resetWorkspace, saveWorkspace } from "./store.js";
@@ -139,6 +140,23 @@ function showToast(message, isError = false) {
 function nextId(prefix, records) {
   const numbers = (records || []).map((item) => Number(String(item.id || "").split("-").pop())).filter(Number.isFinite);
   return prefix + "-" + String(Math.max(0, ...numbers) + 1).padStart(4, "0");
+}
+
+function dateAtLocalHour(dateInput, hour, label) {
+  if (!isValidDateInput(dateInput)) throw new Error("Choose a real calendar date for " + label + ".");
+  const parsed = new Date(dateInput + "T" + String(hour).padStart(2, "0") + ":00:00");
+  if (!Number.isFinite(parsed.getTime())) throw new Error("Choose a valid date for " + label + ".");
+  return parsed.toISOString();
+}
+
+function assertCandidateIntegrity(candidateData, touchedRecords) {
+  const touched = new Set(touchedRecords.map((item) => item.collection + ":" + item.id));
+  const result = validateWorkspaceData(candidateData);
+  const blocking = result.issues.filter((issue) => touched.has(issue.collection + ":" + issue.recordId));
+  if (!blocking.length) return;
+  const messages = blocking.slice(0, 3).map((issue) => issue.message + " " + issue.recommendation);
+  if (blocking.length > 3) messages.push((blocking.length - 3) + " additional record-integrity issue(s).");
+  throw new Error("This record cannot be saved yet. " + messages.join(" "));
 }
 function pageHeading(title, subtitle, eyebrow, actions = "") {
   return '<div class="page-heading"><div><div class="eyebrow">' + esc(eyebrow) + '</div><h1>' + esc(title) + '</h1><p class="page-subtitle">' + esc(subtitle) + '</p></div><div class="heading-actions">' + actions + '</div></div>';
@@ -501,6 +519,23 @@ function renderReports() {
 
 function renderSystem() {
   const d = currentData();
+  const integrity = validateWorkspaceData(d);
+  const issueRows = integrity.issues.map((issue) => '<tr><td>' + esc(issue.recordType) + '</td>' +
+    '<td><div class="primary-cell">' + esc(issue.recordId) + '</div><div class="secondary-cell">' + esc(issue.field || issue.collection) + '</div></td>' +
+    '<td><div class="integrity-message">' + esc(issue.message) + '</div><div class="secondary-cell">' + esc(issue.recommendation) + '</div></td>' +
+    '<td><button class="link-button" type="button" data-page="' + esc(issue.page) + '">Open register ' + icon("arrow") + '</button></td></tr>').join("");
+  const integrityPanel = panel("Record integrity", "Required fields, date formats, unique IDs and cross-record links",
+    '<div class="panel-body"><div class="integrity-summary">' +
+    '<div><div class="integrity-number">' + integrity.recordCount + '</div><div class="integrity-label">Records checked</div></div>' +
+    '<div><div class="integrity-number">' + integrity.issueCount + '</div><div class="integrity-label">Issues found</div></div>' +
+    '<div><div class="integrity-number">' + Object.keys(integrity.byCode).length + '</div><div class="integrity-label">Issue categories</div></div>' +
+    '</div>' + (integrity.valid
+      ? '<div class="integrity-ok"><strong>All current integrity checks passed.</strong><div>This checks record structure and links only. It does not prove that sample data is true, complete for operations, or approved.</div></div>'
+      : '<div class="integrity-warning"><strong>Some records need attention.</strong><div>Each row explains the problem and the next corrective step. Review these before relying on affected records.</div></div>') +
+    '</div>' +
+    (integrity.issues.length ? '<div class="table-wrap"><table><thead><tr><th>Record type</th><th>Record / field</th><th>Issue and recommended fix</th><th></th></tr></thead><tbody>' +
+      issueRows + '</tbody></table></div>' : '') +
+    '<div class="panel-footer">Checks are re-run from the records currently loaded in this browser when the page is rendered. There is no server-side validation or shared database in this demo.</div>');
   const healthItems = [
     ["Data source", "Illustrative sample records", "Current records are seeded for product testing, not connected to a live source.", "review_required"],
     ["Persistence", "Current browser only", "Changes are saved to browser local storage when available. No cross-device or multi-user sync.", "review_required"],
@@ -514,6 +549,8 @@ function renderSystem() {
   return pageHeading("System health", "An explicit view of current data and capability boundaries.", "PLATFORM STATUS",
     '<button class="button" data-reset-demo>' + icon("refresh") + ' Reset demo data</button>') +
     '<div class="health-grid">' + healthItems.map((item) => '<article class="health-item"><div class="health-item-top"><div class="health-title">' + esc(item[0]) + '</div>' + pill(item[3]) + '</div><div class="primary-cell health-value">' + esc(item[1]) + '</div><div class="health-desc">' + esc(item[2]) + '</div></article>').join("") + '</div>' +
+    '<div class="section-spacer" aria-hidden="true"></div>' +
+    integrityPanel +
     '<div class="section-spacer" aria-hidden="true"></div>' +
     panel("Local workspace diagnostics", "Current browser-local counts; a successful render is not a production-readiness check",
       '<div class="table-wrap"><table><thead><tr><th>Record family</th><th>Count</th><th>Storage / truth boundary</th></tr></thead><tbody>' +
