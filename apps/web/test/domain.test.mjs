@@ -118,7 +118,7 @@ test("workspace search finds records across registers and follows site relations
   assert.deepEqual(siteMatches.map((item) => item.type), ["Inspection", "Finding", "Evidence", "Site"]);
   assert.equal(siteMatches[0].openType, "inspection");
   assert.equal(siteMatches[1].openType, "finding");
-  assert.equal(siteMatches[2].page, "sites");
+  assert.equal(siteMatches[3].page, "sites");
   assert.equal(searchWorkspaceRecords(data, "forklift")[0].type, "Asset");
   assert.ok(searchWorkspaceRecords(data, "damaged guard").some((item) => item.type === "Evidence"), "searching a linked finding should also find its evidence");
   assert.equal(searchWorkspaceRecords(data, "mechanical services")[0].type, "Supplier / contractor");
