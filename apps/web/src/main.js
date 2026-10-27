@@ -690,6 +690,45 @@ function renderModal() {
     '<div class="modal-backdrop" data-close-modal><section class="modal ' + (wide ? "modal-wide" : "") + '" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
     modalHeader(title, subtitle) + '<div class="modal-content">' + body + '</div>' + (footer ? '<div class="modal-footer">' + footer + '</div>' : '') + '</section></div>';
 
+  if (type === "create-evidence") {
+    const groups = [
+      ["inspections", "Inspection", "title"],
+      ["findings", "Finding", "title"],
+      ["actions", "Corrective action", "title"],
+      ["audits", "Audit", "title"],
+      ["reviews", "Management review", "title"],
+      ["sites", "Site", "name"],
+      ["assets", "Asset", "name"],
+      ["risks", "Risk", "title"],
+      ["contractors", "Supplier / contractor", "name"]
+    ];
+    const linkOptions = groups.flatMap(([collection, label, titleField]) =>
+      (d[collection] || []).map((record) => ({
+        value: label === "Management review" ? "management_review:" + record.id :
+          label === "Corrective action" ? "action:" + record.id :
+          label === "Supplier / contractor" ? "contractor:" + record.id :
+          label.toLowerCase() + ":" + record.id,
+        label: label + " — " + (record[titleField] || record.id) + " (" + record.id + ")"
+      }))
+    ).map((option) => '<option value="' + esc(option.value) + '">' + esc(option.label) + '</option>').join("");
+    const evidenceTypeOptions = [
+      ["inspection_note", "Inspection note"], ["document_reference", "Document reference"],
+      ["photo_note", "Photo reference / note"], ["measurement_note", "Measurement note"],
+      ["external_reference", "External reference"]
+    ].map(([value, label]) => '<option value="' + value + '">' + label + '</option>').join("");
+    return modalWrap("Record evidence reference", "Describe the reference and link it to the record it supports. No file is uploaded.",
+      '<form id="createEvidenceForm" data-form="create-evidence"><div class="form-grid">' +
+      '<div class="field full"><label for="evidenceTitle">Evidence title *</label><input id="evidenceTitle" name="title" required maxlength="160" placeholder="e.g. Inspection photograph reference"></div>' +
+      '<div class="field"><label for="evidenceType">Reference type *</label><select id="evidenceType" name="evidenceType" required>' + evidenceTypeOptions + '</select></div>' +
+      '<div class="field"><label for="evidenceLinkedRecord">Linked record *</label><select id="evidenceLinkedRecord" name="linkedRecord" required>' + linkOptions + '</select></div>' +
+      '<div class="field"><label for="evidenceCapturedAt">Capture / record date *</label><input type="date" id="evidenceCapturedAt" name="capturedDate" value="' + esc(dateInputAt(0)) + '" required></div>' +
+      '<div class="field"><label for="evidenceCapturedBy">Recorded by *</label><select id="evidenceCapturedBy" name="capturedBy" required>' + d.people.map((person) => '<option>' + esc(person.name) + '</option>').join("") + '</select></div>' +
+      '<div class="field full"><label for="evidenceSourceDescription">Origin and context *</label><textarea id="evidenceSourceDescription" name="sourceDescription" required minlength="8" maxlength="1200" placeholder="Describe who supplied it, how it was captured, and relevant context."></textarea></div>' +
+      '<div class="field full"><label for="evidenceSourceReference">Source reference / identifier</label><input id="evidenceSourceReference" name="sourceReference" maxlength="240" placeholder="Document number, internal reference, or external locator (not a file upload)"></div>' +
+      '</div><div class="demo-banner top-space">' + icon("info") + '<div><strong>Metadata only</strong><p>Do not paste credentials or sensitive personal details. Attachments, access permissions, checksums, and managed retention are not implemented.</p></div></div>' +
+      '<div class="modal-footer modal-inline-footer"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("plus") + ' Save reference</button></div></form>', "", true);
+  }
+
   if (type === "create-inspection") {
     const options = d.sites.map((s) => '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>').join("");
     return modalWrap("Schedule an inspection", "Creates a local demo record with five required checklist items.",
@@ -701,6 +740,53 @@ function renderModal() {
       '<div class="field"><label for="inspectionPriority">Priority</label><select id="inspectionPriority" name="priority"><option>High</option><option selected>Medium</option><option>Low</option></select></div>' +
       '</div><p class="field-note">This creates a browser-local record only. No one else will receive or see it.</p>' +
       '<div class="modal-footer modal-inline-footer"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("plus") + ' Create inspection</button></div></form>', "", true);
+  }
+
+  if (type === "evidence-detail" || type === "review-evidence") {
+    const evidence = (d.evidence || []).find((item) => item.id === modalState.id);
+    if (!evidence) return modalWrap("Evidence record unavailable", "", emptyState("Record not found", "Close this dialog and refresh the workspace."));
+    const target = evidenceTarget(evidence);
+    const currentReviewState = evidence.reviewStatus;
+    if (type === "review-evidence") {
+      const targetState = modalState.target;
+      const actionLabel = targetState === "accepted" ? "Accept reference" :
+        targetState === "rejected" ? "Reject reference" : "Mark superseded";
+      if (!["accepted", "rejected", "superseded"].includes(targetState)) {
+        return modalWrap("Review unavailable", evidence.id, emptyState("Unsupported review state", "Close this dialog and choose a supported review action."));
+      }
+      return modalWrap(actionLabel, evidence.id + " · " + evidence.title,
+        '<div class="demo-banner">' + icon("info") + '<div><strong>Review the reference, not a missing file</strong><p>This action records a reviewer, timestamp and rationale for the metadata reference. It does not verify file authenticity or physical conditions.</p></div></div>' +
+        '<form id="reviewEvidenceForm" data-form="review-evidence"><div class="form-grid">' +
+        '<div class="field full"><label for="evidenceReviewer">Reviewer *</label><select id="evidenceReviewer" name="reviewer" required>' + d.people.map((person) => '<option>' + esc(person.name) + '</option>').join("") + '</select></div>' +
+        '<div class="field full"><label for="evidenceReviewNote">Review rationale *</label><textarea id="evidenceReviewNote" name="reviewNote" required minlength="8" maxlength="1200" placeholder="Explain what was checked, why this state is appropriate, and any limitation."></textarea><div class="field-note">At least 8 characters. This rationale is stored with the reference.</div></div>' +
+        '</div><div class="modal-footer modal-inline-footer"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("check") + ' ' + actionLabel + '</button></div></form>', "", true);
+    }
+    const targetLink = target.record
+      ? '<div class="exception-row"><div class="exception-copy"><div class="exception-title">' + esc(target.title) + '</div><div class="exception-meta">' + esc(target.config.label + " · " + evidence.linkedEntityId) + '</div></div>' + evidenceTargetButton(evidence) + '</div>'
+      : '<div class="integrity-warning"><strong>Linked record unavailable</strong><div>Repair the linked record before relying on this reference.</div></div>';
+    const reviewTrail = currentReviewState === "pending_review"
+      ? '<div class="integrity-warning"><strong>Review pending</strong><div>The origin is recorded, but no review decision has been made.</div></div>'
+      : '<div class="integrity-ok"><strong>Review state: ' + esc(displayStatus(currentReviewState)) + '</strong><div>' + esc((evidence.reviewedBy || "Reviewer not recorded") + " · " + (evidence.reviewedAt ? formatDateTime(evidence.reviewedAt) : "Time not recorded")) + '</div><p class="page-subtitle">' + esc(evidence.reviewNote || "No rationale recorded.") + '</p></div>';
+    let reviewActions = "";
+    if (currentReviewState === "pending_review") {
+      reviewActions = '<button class="button" type="button" data-review-evidence="' + esc(evidence.id) + '" data-evidence-target="rejected">Reject reference</button>' +
+        '<button class="button button-primary" type="button" data-review-evidence="' + esc(evidence.id) + '" data-evidence-target="accepted">' + icon("check") + ' Accept reference</button>';
+    } else if (["accepted", "rejected"].includes(currentReviewState)) {
+      reviewActions = '<button class="button" type="button" data-review-evidence="' + esc(evidence.id) + '" data-evidence-target="superseded">Mark superseded</button>';
+    }
+    return modalWrap(evidence.title, evidence.id + " · Evidence metadata",
+      '<div class="modal-record-grid"><div><div class="modal-record-label">Reference type</div><div class="modal-record-value">' + esc(evidenceTypeLabel(evidence.evidenceType)) + '</div></div>' +
+      '<div><div class="modal-record-label">Review state</div>' + pill(currentReviewState) + '</div>' +
+      '<div><div class="modal-record-label">Captured / recorded</div><div class="modal-record-value">' + esc(formatDateTime(evidence.capturedAt)) + '</div></div>' +
+      '<div><div class="modal-record-label">Recorded by</div><div class="modal-record-value">' + esc(evidence.capturedBy) + '</div></div>' +
+      '<div><div class="modal-record-label">Storage mode</div><div class="modal-record-value">Metadata only · No file stored</div></div>' +
+      '<div><div class="modal-record-label">Version</div><div class="modal-record-value">' + esc(evidence.version || 1) + '</div></div></div>' +
+      '<div class="modal-section-title">Linked operational record</div>' + targetLink +
+      '<div class="modal-section-title">Origin and context</div><p class="page-subtitle">' + esc(evidence.sourceDescription) + '</p>' +
+      '<div class="modal-section-title">Source reference</div><p class="page-subtitle">' + esc(evidence.sourceReference || "No external source identifier recorded.") + '</p>' +
+      '<div class="modal-section-title">Review decision</div>' + reviewTrail +
+      '<p class="field-note top-space">An accepted reference is not independent proof that underlying evidence is genuine, accessible, current, or sufficient.</p>',
+      '<button class="button" type="button" data-close-dialog>Close</button>' + reviewActions, true);
   }
 
   if (type === "inspection-detail") {
