@@ -261,7 +261,7 @@ export function validateWorkspaceData(data) {
             "Restore the list before adding or changing linked items.");
         }
       }
-      if (collection === "reviews" && isNonEmpty(record.period) && !/^\d{4}-(0[1-9]|1[0-2])$/.test(String(record.period))) {
+      if (collection === "reviews" && isNonEmpty(record.period) && !isValidReportingMonth(String(record.period))) {
         addIssue(collection, record, "invalid_period", "period", "Management review period must use YYYY-MM.",
           "Choose a valid calendar month, for example 2026-10.");
       }
@@ -413,6 +413,10 @@ export function validateWorkspaceData(data) {
 
 export function isValidDateInput(value) {
   return isValidCalendarDate(value);
+}
+
+export function isValidReportingMonth(value) {
+  return typeof value === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
 }
 
 const SEARCHABLE_COLLECTIONS = [
