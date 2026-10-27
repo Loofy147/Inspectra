@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   calculateKpis, closeAction, isActionOverdue, isInspectionOverdue,
-  isValidDateInput, searchWorkspaceRecords, toCsv, transitionInspection,
+  isValidDateInput, isValidReportingMonth, searchWorkspaceRecords, toCsv, transitionInspection,
   validateWorkspaceData, verifyFinding
 } from "../src/domain.js";
 
@@ -159,6 +159,15 @@ test("record-integrity checks catch links that are missing in the reverse direct
   assert.ok(result.issues.some((issue) => issue.code === "missing_inverse_action_link" && issue.recordId === "ACT-0301"));
   assert.ok(result.issues.some((issue) => issue.code === "missing_inverse_review_link" && issue.recordId === "ACT-0305"));
   assert.ok(result.issues.some((issue) => issue.code === "inconsistent_action_link" && issue.recordId === "FND-0201"));
+});
+
+test("reporting months must be real months in YYYY-MM format", () => {
+  assert.equal(isValidReportingMonth("2026-10"), true);
+  assert.equal(isValidReportingMonth("2024-02"), true);
+  assert.equal(isValidReportingMonth("2026-00"), false);
+  assert.equal(isValidReportingMonth("2026-13"), false);
+  assert.equal(isValidReportingMonth("26-10"), false);
+  assert.equal(isValidReportingMonth("2026-2"), false);
 });
 
 test("date input validation rejects impossible calendar dates", () => {
