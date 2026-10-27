@@ -2,6 +2,14 @@ export const TERMINAL_INSPECTION_STATES = new Set(["completed", "cancelled"]);
 export const TERMINAL_ACTION_STATES = new Set(["resolved", "verified", "cancelled"]);
 export const TERMINAL_FINDING_STATES = new Set(["resolved", "verified", "dismissed"]);
 
+export const EVIDENCE_TYPES = new Set([
+  "document_reference", "photo_note", "inspection_note", "measurement_note", "external_reference"
+]);
+export const EVIDENCE_REVIEW_STATES = new Set(["pending_review", "accepted", "rejected", "superseded"]);
+export const EVIDENCE_LINK_TYPES = new Set([
+  "inspection", "finding", "action", "audit", "management_review", "site", "asset", "risk", "contractor"
+]);
+
 function time(value) {
   const result = value instanceof Date ? value.getTime() : new Date(value).getTime();
   return Number.isFinite(result) ? result : NaN;
@@ -127,6 +135,33 @@ export function verifyFinding(finding, linkedActions, verificationNote, now = ne
   };
 }
 
+
+export function reviewEvidence(evidence, targetState, reviewNote, reviewer, now = new Date()) {
+  if (!evidence) throw new Error("Evidence record not found.");
+  if (!EVIDENCE_REVIEW_STATES.has(targetState)) throw new Error("Choose a supported evidence review state.");
+  const current = evidence.reviewStatus;
+  const allowed = current === "pending_review"
+    ? ["accepted", "rejected"]
+    : (["accepted", "rejected"].includes(current) ? ["superseded"] : []);
+  if (!allowed.includes(targetState)) {
+    throw new Error("This evidence review transition is not allowed.");
+  }
+  const note = String(reviewNote || "").trim();
+  const actor = String(reviewer || "").trim();
+  if (note.length < 8) throw new Error("Add a review note of at least 8 characters.");
+  if (!actor) throw new Error("Select the person recording this review.");
+  const at = new Date(now);
+  if (!Number.isFinite(at.getTime())) throw new Error("A valid review timestamp is required.");
+  return {
+    ...evidence,
+    reviewStatus: targetState,
+    reviewNote: note,
+    reviewedAt: at.toISOString(),
+    reviewedBy: actor,
+    version: (evidence.version || 1) + 1
+  };
+}
+
 function csvCell(value) {
   let text = value == null ? "" : String(value);
   // Prevent formula execution when text fields are opened in spreadsheet software.
@@ -152,6 +187,7 @@ const WORKSPACE_COLLECTION_RULES = {
   people: { label: "Person", page: "people", required: ["name", "role", "siteId", "status"] },
   contractors: { label: "Supplier / contractor", page: "people", required: ["name", "service", "siteId", "credentialDueAt", "status"], dates: ["credentialDueAt"] },
   reviews: { label: "Management review", page: "reviews", required: ["title", "period", "scheduledAt", "chair", "status"], dates: ["scheduledAt", "startedAt", "completedAt", "createdAt"], arrays: ["decisionActionIds"] },
+  evidence: { label: "Evidence record", page: "evidence", required: ["title", "evidenceType", "linkedEntityType", "linkedEntityId", "capturedAt", "capturedBy", "sourceDescription", "reviewStatus", "storageMode"], dates: ["capturedAt", "reviewedAt"] },
   activity: { label: "Activity event", page: "system", required: ["at", "actor", "action", "entityType", "entityId", "summary"], dates: ["at"] }
 };
 
@@ -265,6 +301,39 @@ export function validateWorkspaceData(data) {
         addIssue(collection, record, "invalid_period", "period", "Management review period must use YYYY-MM.",
           "Choose a valid calendar month, for example 2026-10.");
       }
+      if (collection === "evidence") {
+        if (isNonEmpty(record.evidenceType) && !EVIDENCE_TYPES.has(String(record.evidenceType))) {
+          addIssue(collection, record, "invalid_evidence_type", "evidenceType", "Evidence type is not supported.",
+            "Choose a supported evidence type such as Document reference, Photo note or Inspection note.");
+        }
+        if (isNonEmpty(record.reviewStatus) && !EVIDENCE_REVIEW_STATES.has(String(record.reviewStatus))) {
+          addIssue(collection, record, "invalid_evidence_review_state", "reviewStatus", "Evidence has an unsupported review state.",
+            "Use Pending review, Accepted, Rejected or Superseded.");
+        }
+        if (isNonEmpty(record.linkedEntityType) && !EVIDENCE_LINK_TYPES.has(String(record.linkedEntityType))) {
+          addIssue(collection, record, "invalid_evidence_link_type", "linkedEntityType", "Evidence is linked using an unsupported record type.",
+            "Choose an existing inspection, finding, action, audit, management review, site, asset, risk or contractor.");
+        }
+        if (record.storageMode !== "metadata_only") {
+          addIssue(collection, record, "unsupported_evidence_storage_mode", "storageMode",
+            "This shell supports evidence metadata only; it does not store or upload files.",
+            "Use metadata_only until a reviewed evidence-storage service is implemented.");
+        }
+        if (["accepted", "rejected", "superseded"].includes(record.reviewStatus)) {
+          for (const field of ["reviewedAt", "reviewedBy", "reviewNote"]) {
+            if (!isNonEmpty(record[field])) {
+              addIssue(collection, record, "incomplete_evidence_review", field,
+                "Evidence in " + record.reviewStatus + " state is missing " + field + ".",
+                "Record the reviewer, review time and rationale before treating the state as reviewed.");
+            }
+          }
+        }
+        if (record.reviewNote && String(record.reviewNote).trim().length < 8) {
+          addIssue(collection, record, "short_evidence_review_note", "reviewNote",
+            "Evidence review notes must contain at least 8 characters.",
+            "Record the reason for accepting, rejecting or superseding the reference.");
+        }
+      }
       if (collection === "inspections" || collection === "audits") {
         if (Array.isArray(record.checklist)) {
           const seenChecks = new Set();
@@ -329,6 +398,22 @@ export function validateWorkspaceData(data) {
     }
   }
 
+  const evidenceEntityCollections = {
+    inspection: "inspections", finding: "findings", action: "actions", audit: "audits",
+    management_review: "reviews", site: "sites", asset: "assets", risk: "risks", contractor: "contractors"
+  };
+  for (const evidence of recordsByCollection.get("evidence") || []) {
+    if (!evidence || typeof evidence !== "object") continue;
+    const targetCollection = evidenceEntityCollections[evidence.linkedEntityType];
+    if (!targetCollection || !isNonEmpty(evidence.linkedEntityId)) continue;
+    const targetMap = collectionMaps.get(targetCollection) || new Map();
+    if (!targetMap.has(String(evidence.linkedEntityId))) {
+      addIssue("evidence", evidence, "broken_evidence_link", "linkedEntityId",
+        "Evidence refers to a missing " + targetCollection.replaceAll("_", " ").replace(/s$/, "").replace("management_review", "management review") + " (" + evidence.linkedEntityId + ").",
+        "Choose an existing record or restore the missing record before relying on this evidence reference.");
+    }
+  }
+
   for (const finding of recordsByCollection.get("findings") || []) {
     if (!finding || typeof finding !== "object" || !Array.isArray(finding.actionIds)) continue;
     const actionMap = collectionMaps.get("actions") || new Map();
@@ -386,7 +471,8 @@ export function validateWorkspaceData(data) {
   const entityCollections = {
     site: "sites", asset: "assets", inspection: "inspections", finding: "findings", action: "actions",
     risk: "risks", audit: "audits", requirement: "requirements", person: "people",
-    contractor: "contractors", supplier: "contractors", management_review: "reviews", review: "reviews"
+    contractor: "contractors", supplier: "contractors", management_review: "reviews", review: "reviews",
+    evidence: "evidence"
   };
   const activity = recordsByCollection.get("activity") || [];
   for (const event of activity) {
@@ -425,6 +511,7 @@ const SEARCHABLE_COLLECTIONS = [
   { key: "actions", type: "Corrective action", page: "findings", openType: "action" },
   { key: "audits", type: "Audit", page: "audits", openType: "audit" },
   { key: "reviews", type: "Management review", page: "reviews", openType: "review" },
+  { key: "evidence", type: "Evidence", page: "evidence", openType: "evidence" },
   { key: "sites", type: "Site", page: "sites", openType: null },
   { key: "assets", type: "Asset", page: "sites", openType: null },
   { key: "risks", type: "Risk", page: "risk", openType: null },
