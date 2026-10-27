@@ -237,6 +237,13 @@ function renderOverview() {
     metricCard("Overdue actions", String(k.overdueActions), "Open corrective actions past due", "inbox", k.overdueActions ? "tone-warn" : "") +
     metricCard("Checklist completion", formatPercent(k.checklistCompletionRate), k.checklistCompleted + " of " + k.checklistRequired + " required checks marked complete", "clipboard", "") +
     '</div>' +
+    panel("Data quality & accountability", "Open records that need basic ownership or scheduling metadata", 
+      '<div class="panel-body"><div class="exception-list">' +
+      '<div class="exception-row"><div class="exception-copy"><div class="exception-title">Open actions without an owner</div><div class="exception-meta">These actions have no accountable person recorded.</div></div>' + pill(k.openActionsMissingOwner ? "review_required" : "current") + '<strong>' + k.openActionsMissingOwner + '</strong></div>' +
+      '<div class="exception-row"><div class="exception-copy"><div class="exception-title">Open actions without a valid due date</div><div class="exception-meta">Missing or invalid dates prevent reliable deadline monitoring.</div></div>' + pill(k.openActionsMissingDueDate ? "review_required" : "current") + '<strong>' + k.openActionsMissingDueDate + '</strong></div>' +
+      '<div class="exception-row"><div class="exception-copy"><div class="exception-title">Open findings without an owner</div><div class="exception-meta">An unresolved finding needs an accountable follow-up role.</div></div>' + pill(k.openFindingsMissingOwner ? "review_required" : "current") + '<strong>' + k.openFindingsMissingOwner + '</strong></div>' +
+      '<div class="exception-row"><div class="exception-copy"><div class="exception-title">Inspection owner coverage</div><div class="exception-meta">Non-cancelled inspections with an owner recorded; denominator includes all non-cancelled inspections.</div></div><strong>' + esc(formatPercent(k.inspectionOwnerCoverageRate)) + '</strong></div>' +
+      '</div></div><div class="panel-footer">Calculated from current browser-local records. These are metadata checks, not evidence that work was performed or controls are effective.</div>') +
     '<div class="content-grid">' +
     panel("Current inspection workload", "Current record count by status · snapshot, not a historical trend",
       '<div class="panel-body"><div class="state-bars">' + stateDefs.map((state) => {
