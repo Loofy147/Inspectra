@@ -10,6 +10,8 @@ Build one reusable Operational Assurance core and configure domain packs on top 
 
 The current web shell is a dependency-free browser application. Domain rules live in ES modules and are testable with Node's built-in test runner. The current store uses browser local storage and seeded illustrative records. There is no production API, database connection, authentication, cross-user synchronization, document repository, or external system integration in this shell.
 
+The shell includes a metadata-only evidence register with provenance fields, links to current operational records, review-state validation, and CSV export. It does not upload or store evidence files, independently authenticate references, or provide durable review history. See [Evidence Traceability Model](evidence-traceability.md) for production acceptance gates.
+
 Do not infer production readiness from the UI working.
 
 ## Logical layers
