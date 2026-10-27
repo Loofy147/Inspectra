@@ -3,8 +3,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   calculateKpis, closeAction, isActionOverdue, isInspectionOverdue,
-  isValidDateInput, isValidReportingMonth, searchWorkspaceRecords, toCsv, transitionInspection,
-  validateWorkspaceData, verifyFinding
+  isValidDateInput, isValidReportingMonth, reviewEvidence, searchWorkspaceRecords, toCsv,
+  transitionInspection, validateWorkspaceData, verifyFinding
 } from "../src/domain.js";
 
 import {
@@ -130,7 +130,7 @@ test("the seeded demo workspace passes record-integrity checks", () => {
   const result = validateWorkspaceData(createDemoState());
   assert.equal(result.valid, true, JSON.stringify(result.issues, null, 2));
   assert.equal(result.issueCount, 0);
-  assert.equal(result.recordCount, 53);
+  assert.equal(result.recordCount, 56);
 });
 
 test("record-integrity checks identify missing fields, invalid dates, duplicate IDs and broken links", () => {
@@ -159,6 +159,47 @@ test("record-integrity checks catch links that are missing in the reverse direct
   assert.ok(result.issues.some((issue) => issue.code === "missing_inverse_action_link" && issue.recordId === "ACT-0301"));
   assert.ok(result.issues.some((issue) => issue.code === "missing_inverse_review_link" && issue.recordId === "ACT-0305"));
   assert.ok(result.issues.some((issue) => issue.code === "inconsistent_action_link" && issue.recordId === "FND-0201"));
+});
+
+
+test("evidence metadata has valid provenance and links to existing operational records", () => {
+  const data = createDemoState();
+  const result = validateWorkspaceData(data);
+  assert.equal(result.valid, true, JSON.stringify(result.issues, null, 2));
+  assert.equal(data.evidence.length, 3);
+  assert.ok(data.evidence.every((item) => item.storageMode === "metadata_only"));
+  assert.ok(data.evidence.every((item) => data[item.linkedEntityType === "management_review" ? "reviews" : ({
+    inspection: "inspections", finding: "findings", action: "actions", audit: "audits",
+    site: "sites", asset: "assets", risk: "risks", contractor: "contractors"
+  })[item.linkedEntityType]].some((record) => record.id === item.linkedEntityId)));
+});
+
+test("evidence integrity flags broken links, invalid states and incomplete review provenance", () => {
+  const data = createDemoState();
+  const evidence = data.evidence[0];
+  evidence.linkedEntityId = "FND-MISSING";
+  evidence.reviewStatus = "approved";
+  evidence.reviewedBy = "";
+  const result = validateWorkspaceData(data);
+  assert.ok(result.issues.some((issue) => issue.code === "broken_evidence_link" && issue.recordId === evidence.id));
+  assert.ok(result.issues.some((issue) => issue.code === "invalid_evidence_review_state" && issue.recordId === evidence.id));
+});
+
+test("evidence review transitions require a rationale and reviewer", () => {
+  const pending = {
+    id: "EVD-TEST", title: "Reference test", reviewStatus: "pending_review", version: 1
+  };
+  assert.throws(() => reviewEvidence(pending, "accepted", "ok", "Maya Chen", fixedNow), /8 characters/i);
+  assert.throws(() => reviewEvidence(pending, "accepted", "Reference checked against the stated source", "", fixedNow), /reviewer/i);
+  const accepted = reviewEvidence(pending, "accepted", "Reference checked against the stated source", "Maya Chen", fixedNow);
+  assert.equal(accepted.reviewStatus, "accepted");
+  assert.equal(accepted.reviewedAt, fixedNow.toISOString());
+  assert.equal(accepted.reviewedBy, "Maya Chen");
+  assert.equal(accepted.version, 2);
+  assert.equal(pending.reviewStatus, "pending_review", "review functions must not mutate input records");
+  assert.throws(() => reviewEvidence(accepted, "rejected", "The reference is now rejected", "Maya Chen", fixedNow), /transition is not allowed/i);
+  const superseded = reviewEvidence(accepted, "superseded", "A newer reference replaced this one", "Maya Chen", fixedNow);
+  assert.equal(superseded.reviewStatus, "superseded");
 });
 
 test("reporting months must be real months in YYYY-MM format", () => {
