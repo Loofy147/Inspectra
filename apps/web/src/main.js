@@ -19,7 +19,8 @@ const navGroups = [
     { id: "overview", label: "Overview", icon: "grid" },
     { id: "queue", label: "Work queue", icon: "inbox", count: "queue" },
     { id: "inspections", label: "Inspections", icon: "clipboard" },
-    { id: "findings", label: "Findings & actions", icon: "alert", count: "findings" }
+    { id: "findings", label: "Findings & actions", icon: "alert", count: "findings" },
+    { id: "evidence", label: "Evidence", icon: "file" }
   ]},
   { label: "MANAGEMENT", items: [
     { id: "risk", label: "Risk & controls", icon: "shield" },
@@ -39,6 +40,7 @@ const pageMeta = {
   queue: ["Work queue", "Work that needs an owner, review or next action.", "EXECUTION CONTROL"],
   inspections: ["Inspections", "Schedule and execute repeatable checks with required-step guardrails.", "WORK EXECUTION"],
   findings: ["Findings & actions", "Track exceptions through action closure and effectiveness verification.", "CORRECTIVE CONTROL"],
+  evidence: ["Evidence", "Record provenance and link evidence references to operational records.", "EVIDENCE TRACEABILITY"],
   risk: ["Risk & controls", "Review risks and controls with an explicit, unapproved demo scoring method.", "RISK MANAGEMENT"],
   sites: ["Sites & assets", "Explore locations, equipment and linked work.", "OPERATIONAL STRUCTURE"],
   audits: ["Audit & compliance", "Coordinate audit activity and track requirements needing attention.", "ASSURANCE"],
