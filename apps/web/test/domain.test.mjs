@@ -1,8 +1,10 @@
+import { createDemoState } from "../src/seed.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
   calculateKpis, closeAction, isActionOverdue, isInspectionOverdue,
-  searchWorkspaceRecords, toCsv, transitionInspection, verifyFinding
+  isValidDateInput, searchWorkspaceRecords, toCsv, transitionInspection,
+  validateWorkspaceData, verifyFinding
 } from "../src/domain.js";
 
 import {
@@ -121,6 +123,41 @@ test("workspace search finds records across registers and follows site relations
   assert.equal(searchWorkspaceRecords(data, "emergency lighting")[0].type, "Requirement");
   assert.equal(searchWorkspaceRecords(data, "  ").length, 0);
   assert.equal(searchWorkspaceRecords(data, "no such record").length, 0);
+});
+
+
+test("the seeded demo workspace passes record-integrity checks", () => {
+  const result = validateWorkspaceData(createDemoState());
+  assert.equal(result.valid, true, JSON.stringify(result.issues, null, 2));
+  assert.equal(result.issueCount, 0);
+  assert.equal(result.recordCount, 53);
+});
+
+test("record-integrity checks identify missing fields, invalid dates, duplicate IDs and broken links", () => {
+  const data = createDemoState();
+  data.inspections[0].owner = " ";
+  data.inspections[0].dueAt = "not-a-date";
+  data.sites.push({ ...data.sites[0], name: "Duplicate identifier fixture" });
+  data.assets[0].siteId = "SITE-DOES-NOT-EXIST";
+  data.findings[0].actionIds = ["ACT-DOES-NOT-EXIST"];
+
+  const result = validateWorkspaceData(data);
+  assert.equal(result.valid, false);
+  assert.ok(result.issues.some((issue) => issue.code === "missing_required_field" && issue.recordId === data.inspections[0].id && issue.field === "owner"));
+  assert.ok(result.issues.some((issue) => issue.code === "invalid_date" && issue.recordId === data.inspections[0].id && issue.field === "dueAt"));
+  assert.ok(result.issues.some((issue) => issue.code === "duplicate_id" && issue.recordId === data.sites[0].id));
+  assert.ok(result.issues.some((issue) => issue.code === "broken_relation" && issue.recordId === data.assets[0].id));
+  assert.ok(result.issues.some((issue) => issue.code === "broken_action_link" && issue.recordId === data.findings[0].id));
+  assert.ok(result.issues.every((issue) => issue.message && issue.recommendation));
+});
+
+test("date input validation rejects impossible calendar dates", () => {
+  assert.equal(isValidDateInput("2024-02-29"), true);
+  assert.equal(isValidDateInput("2026-10-27"), true);
+  assert.equal(isValidDateInput("2025-02-29"), false);
+  assert.equal(isValidDateInput("2026-02-31"), false);
+  assert.equal(isValidDateInput("2026-13-01"), false);
+  assert.equal(isValidDateInput("not-a-date"), false);
 });
 
 test("CSV output quotes values and neutralizes spreadsheet formula text", () => {
