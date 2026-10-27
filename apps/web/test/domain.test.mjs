@@ -170,3 +170,27 @@ test("audit lifecycle only permits scheduled to in-progress and in-progress to c
   assert.equal(started.status, "in_progress");
   assert.equal(started.version, 2);
 });
+
+
+test("data quality KPIs expose missing owners and invalid due dates instead of hiding them", () => {
+  const kpis = calculateKpis({
+    inspections: [
+      { status: "scheduled", owner: "A", dueAt: "2026-10-28T10:00:00.000Z" },
+      { status: "cancelled", owner: "", dueAt: null },
+      { status: "completed", owner: "", dueAt: "2026-10-20T10:00:00.000Z" }
+    ],
+    findings: [
+      { status: "open", owner: "" },
+      { status: "verified", owner: "" }
+    ],
+    actions: [
+      { status: "open", owner: "", dueAt: null },
+      { status: "in_progress", owner: "Maya", dueAt: "invalid" },
+      { status: "resolved", owner: "", dueAt: null }
+    ]
+  }, { asOf: fixedNow });
+  assert.equal(kpis.openActionsMissingOwner, 1);
+  assert.equal(kpis.openActionsMissingDueDate, 2);
+  assert.equal(kpis.openFindingsMissingOwner, 1);
+  assert.equal(kpis.inspectionOwnerCoverageRate, 0.5);
+});
