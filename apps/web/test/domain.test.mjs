@@ -110,15 +110,17 @@ test("workspace search finds records across registers and follows site relations
     assets: [{ id: "AST-1", name: "Forklift FL-04", type: "Material handling" }],
     risks: [], people: [],
     contractors: [{ id: "CON-1", name: "North Mechanical Services", service: "Equipment inspection" }],
-    requirements: [{ id: "REQ-1", title: "Emergency lighting check", status: "open" }]
+    requirements: [{ id: "REQ-1", title: "Emergency lighting check", status: "open" }],
+    evidence: [{ id: "EVD-1", title: "Follow-up field note", linkedEntityType: "finding", linkedEntityId: "FND-1", reviewStatus: "pending_review" }]
   };
   const siteMatches = searchWorkspaceRecords(data, "north distribution");
-  assert.equal(siteMatches.length, 3, "a site search should match the site and records linked to it");
-  assert.deepEqual(siteMatches.map((item) => item.type), ["Inspection", "Finding", "Site"]);
+  assert.equal(siteMatches.length, 4, "a site search should match the site, linked records and their evidence");
+  assert.deepEqual(siteMatches.map((item) => item.type), ["Inspection", "Finding", "Evidence", "Site"]);
   assert.equal(siteMatches[0].openType, "inspection");
   assert.equal(siteMatches[1].openType, "finding");
   assert.equal(siteMatches[2].page, "sites");
   assert.equal(searchWorkspaceRecords(data, "forklift")[0].type, "Asset");
+  assert.ok(searchWorkspaceRecords(data, "damaged guard").some((item) => item.type === "Evidence"), "searching a linked finding should also find its evidence");
   assert.equal(searchWorkspaceRecords(data, "mechanical services")[0].type, "Supplier / contractor");
   assert.equal(searchWorkspaceRecords(data, "emergency lighting")[0].type, "Requirement");
   assert.equal(searchWorkspaceRecords(data, "  ").length, 0);
