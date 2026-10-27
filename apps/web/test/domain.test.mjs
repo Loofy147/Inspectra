@@ -151,6 +151,16 @@ test("record-integrity checks identify missing fields, invalid dates, duplicate 
   assert.ok(result.issues.every((issue) => issue.message && issue.recommendation));
 });
 
+test("record-integrity checks catch links that are missing in the reverse direction", () => {
+  const data = createDemoState();
+  data.actions[0].findingId = "FND-0202";
+  data.actions.find((action) => action.id === "ACT-0305").reviewId = "MR-002";
+  const result = validateWorkspaceData(data);
+  assert.ok(result.issues.some((issue) => issue.code === "missing_inverse_action_link" && issue.recordId === "ACT-0301"));
+  assert.ok(result.issues.some((issue) => issue.code === "missing_inverse_review_link" && issue.recordId === "ACT-0305"));
+  assert.ok(result.issues.some((issue) => issue.code === "inconsistent_action_link" && issue.recordId === "FND-0201"));
+});
+
 test("date input validation rejects impossible calendar dates", () => {
   assert.equal(isValidDateInput("2024-02-29"), true);
   assert.equal(isValidDateInput("2026-10-27"), true);
