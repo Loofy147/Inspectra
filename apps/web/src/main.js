@@ -1,7 +1,7 @@
 import {
   calculateKpis, closeAction, isActionOverdue, isAuditOverdue, isInspectionOverdue,
-  isValidDateInput, searchWorkspaceRecords, toCsv, transitionAudit, transitionInspection,
-  validateWorkspaceData, verifyFinding
+  isValidDateInput, isValidReportingMonth, searchWorkspaceRecords, toCsv, transitionAudit,
+  transitionInspection, validateWorkspaceData, verifyFinding
 } from "./domain.js";
 import { createDemoState, dateInputAt, dateAt, makeChecklist } from "./seed.js";
 import { loadWorkspace, resetWorkspace, saveWorkspace } from "./store.js";
@@ -1075,10 +1075,10 @@ function createManagementReview(form) {
   const period = String(data.get("period") || "");
   const scheduledDate = String(data.get("scheduledDate") || "");
   const chair = String(data.get("chair") || "").trim();
-  if (title.length < 5 || !/^\\d{4}-\\d{2}$/.test(period) || !scheduledDate || !chair) {
+  if (title.length < 5 || !period || !scheduledDate || !chair) {
     throw new Error("Complete the title, reporting period, scheduled date and chair.");
   }
-  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) throw new Error("Choose a valid reporting month in YYYY-MM format.");
+  if (!isValidReportingMonth(period)) throw new Error("Choose a valid reporting month in YYYY-MM format.");
   const scheduledAt = dateAtLocalHour(scheduledDate, 10, "management review date");
   const review = {
     id: nextId("MR", currentData().reviews),
