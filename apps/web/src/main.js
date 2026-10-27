@@ -601,6 +601,22 @@ function evidenceTypeLabel(value) {
   return labels[value] || displayStatus(value);
 }
 
+function renderEvidenceForEntity(entityType, entityId) {
+  const matches = (currentData().evidence || []).filter((item) =>
+    item.linkedEntityType === entityType && item.linkedEntityId === entityId
+  );
+  const rows = matches.map((item) =>
+    '<div class="evidence-ref-row"><div class="evidence-ref-copy"><div class="evidence-ref-title">' + esc(item.title) + '</div>' +
+    '<div class="secondary-cell">' + esc(item.id + " · " + evidenceTypeLabel(item.evidenceType) + " · " + formatDate(item.capturedAt, { year: true })) + '</div></div>' +
+    pill(item.reviewStatus) + '<button class="link-button" type="button" data-open-evidence="' + esc(item.id) + '">Open reference</button></div>'
+  ).join("");
+  return '<div class="modal-section-title">Evidence references · ' + matches.length + '</div>' +
+    (matches.length ? '<div class="evidence-ref-list">' + rows + '</div>' :
+      emptyState("No evidence references linked", "Record a metadata reference if one supports this operational record.")) +
+    '<button class="button button-small top-space" type="button" data-create-evidence data-evidence-link-type="' + esc(entityType) + '" data-evidence-link-id="' + esc(entityId) + '">' +
+    icon("plus") + ' Record evidence reference for this record</button>';
+}
+
 function renderEvidence() {
   const d = currentData();
   const records = applySearch((d.evidence || []).slice().sort((a, b) => new Date(b.capturedAt) - new Date(a.capturedAt)));
@@ -710,7 +726,7 @@ function renderModal() {
           label.toLowerCase() + ":" + record.id,
         label: label + " — " + (record[titleField] || record.id) + " (" + record.id + ")"
       }))
-    ).map((option) => '<option value="' + esc(option.value) + '">' + esc(option.label) + '</option>').join("");
+    ).map((option) => '<option value="' + esc(option.value) + '"' + (option.value === String(modalState.id || "") ? " selected" : "") + '>' + esc(option.label) + '</option>').join("");
     const evidenceTypeOptions = [
       ["inspection_note", "Inspection note"], ["document_reference", "Document reference"],
       ["photo_note", "Photo reference / note"], ["measurement_note", "Measurement note"],
@@ -806,7 +822,8 @@ function renderModal() {
       '<div><div class="modal-record-label">Due date</div><div class="modal-record-value">' + esc(formatDateTime(inspection.dueAt)) + '</div></div><div><div class="modal-record-label">Priority</div>' + priorityPill(inspection.priority) + '</div></div>' +
       '<div class="modal-section-title">Required checklist · ' + done + ' of ' + items.length + ' complete</div>' + checklist +
       (inspection.status === "in_progress" && !canComplete ? '<p class="field-note">Complete every required check before the completion transition is enabled.</p>' : '') +
-      (inspection.completedAt ? '<div class="field-note top-space">Completed at ' + esc(formatDateTime(inspection.completedAt)) + '</div>' : ''),
+      (inspection.completedAt ? '<div class="field-note top-space">Completed at ' + esc(formatDateTime(inspection.completedAt)) + '</div>' : '') +
+      renderEvidenceForEntity("inspection", inspection.id),
       footer, true);
   }
 
@@ -843,6 +860,7 @@ function renderModal() {
       '<div class="modal-section-title">Linked corrective actions</div>' +
       (linkedActions.length ? '<div class="exception-list">' + linkedActions.map((action) => '<div class="exception-row"><div class="exception-copy"><div class="exception-title">' + esc(action.title) + '</div><div class="exception-meta">' + esc(action.id + " · " + action.owner + " · Due " + formatDate(action.dueAt)) + '</div></div>' + pill(actionStatus(action)) + '<button class="link-button" data-open-action="' + esc(action.id) + '">Open</button></div>').join("") + '</div>' : emptyState("No linked actions", "No corrective action has been linked." )) +
       (finding.verificationNote ? '<div class="modal-section-title">Verification note</div><p class="page-subtitle">' + esc(finding.verificationNote) + '</p>' : '') +
+      renderEvidenceForEntity("finding", finding.id) +
       '<div class="modal-section-title">Lifecycle guard</div><p class="page-subtitle">' + (allResolved ? "All linked actions are resolved; the finding may be submitted for verification." : "Resolve all linked actions before verifying effectiveness.") + '</p>',
       '<button class="button" type="button" data-close-dialog>Close</button>' +
       (!["verified", "resolved", "dismissed"].includes(finding.status) ? '<button class="button button-primary" type="button" data-verify-finding="' + esc(finding.id) + '"' + (allResolved ? "" : " disabled") + '>' + icon("check") + ' Verify effectiveness</button>' : ''), true);
@@ -935,7 +953,8 @@ function renderModal() {
       '<div class="modal-section-title">Follow-up decisions</div>' +
       (tasks.length ? '<div class="exception-list">' + tasks.map((task) => '<div class="exception-row"><div class="exception-copy"><div class="exception-title">' + esc(task.title) + '</div><div class="exception-meta">' + esc(task.id + " · " + task.owner + " · Due " + formatDate(task.dueAt, { year: true })) + '</div></div>' + pill(actionStatus(task)) + '<button class="link-button" data-open-action="' + esc(task.id) + '">Open</button></div>').join("") + '</div>' : emptyState("No follow-ups recorded", "Record a decision with an owner and due date while the review is in progress.")) +
       (review.minutes ? '<div class="modal-section-title">Recorded minutes</div><p class="page-subtitle">' + esc(review.minutes) + '</p>' : '<p class="field-note top-space">Minutes have not yet been recorded.</p>') +
-      (review.completedAt ? '<p class="field-note top-space">Completed at ' + esc(formatDateTime(review.completedAt)) + '. Follow-up tasks remain separately tracked.</p>' : ''),
+      (review.completedAt ? '<p class="field-note top-space">Completed at ' + esc(formatDateTime(review.completedAt)) + '. Follow-up tasks remain separately tracked.</p>' : '') +
+      renderEvidenceForEntity("management_review", review.id),
       footer, true);
   }
   if (type === "action-detail" || type === "close-action") {
@@ -955,7 +974,8 @@ function renderModal() {
       (finding ? '<div class="modal-section-title">Linked finding</div><div class="exception-row"><div class="exception-copy"><div class="exception-title">' + esc(finding.title) + '</div><div class="exception-meta">' + esc(finding.id + " · " + displayStatus(finding.status)) + '</div></div><button class="link-button" data-open-finding="' + esc(finding.id) + '">Open finding</button></div>' : '') +
       (action.reviewId ? '<div class="modal-section-title">Source management review</div><div class="exception-row"><div class="exception-copy"><div class="exception-title">' + esc(currentData().reviews.find((r) => r.id === action.reviewId)?.title || "Review unavailable") + '</div><div class="exception-meta">' + esc(action.reviewId) + '</div></div><button class="link-button" data-open-review="' + esc(action.reviewId) + '">Open review</button></div>' : (!finding ? '<p class="page-subtitle">No linked finding.</p>' : '')) +
       (action.resolutionNote ? '<div class="modal-section-title">Resolution note</div><p class="page-subtitle">' + esc(action.resolutionNote) + '</p>' : '') +
-      (action.resolvedAt ? '<p class="field-note">Resolved at ' + esc(formatDateTime(action.resolvedAt)) + '</p>' : ''),
+      (action.resolvedAt ? '<p class="field-note">Resolved at ' + esc(formatDateTime(action.resolvedAt)) + '</p>' : '') +
+      renderEvidenceForEntity("action", action.id),
       '<button class="button" type="button" data-close-dialog>Close</button>' +
       (!["resolved", "verified", "cancelled"].includes(action.status) ? '<button class="button button-primary" type="button" data-close-action="' + esc(action.id) + '">' + icon("check") + (isReviewFollowUp ? ' Resolve follow-up' : ' Resolve action') + '</button>' : ''), true);
   }
@@ -1015,7 +1035,14 @@ function onClick(event) {
   if (target.closest("[data-create-inspection]")) { openModal("create-inspection"); return; }
   if (target.closest("[data-create-finding]")) { openModal("create-finding"); return; }
   if (target.closest("[data-create-audit]")) { openModal("create-audit"); return; }
-  if (target.closest("[data-create-evidence]")) { openModal("create-evidence"); return; }
+  const createEvidenceButton = target.closest("[data-create-evidence]");
+  if (createEvidenceButton) {
+    const linkType = createEvidenceButton.dataset.evidenceLinkType || "";
+    const linkId = createEvidenceButton.dataset.evidenceLinkId || "";
+    modalState = { type: "create-evidence", id: linkType && linkId ? linkType + ":" + linkId : null };
+    render();
+    return;
+  }
   const openEvidenceButton = target.closest("[data-open-evidence]");
   if (openEvidenceButton) { openModal("evidence-detail", openEvidenceButton.dataset.openEvidence); return; }
   const reviewEvidenceButton = target.closest("[data-review-evidence]");
