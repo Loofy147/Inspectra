@@ -68,7 +68,14 @@ export function calculateKpis(data, options = {}) {
     checklistCompleted: completedChecks,
     checklistRequired: requiredChecks,
     checklistCompletionRate: requiredChecks ? completedChecks / requiredChecks : null,
-    openFindings: openFindings.length
+    openFindings: openFindings.length,
+    openActionsMissingOwner: openActions.filter((item) => !String(item.owner || "").trim()).length,
+    openActionsMissingDueDate: openActions.filter((item) => !item.dueAt || !Number.isFinite(time(item.dueAt))).length,
+    openFindingsMissingOwner: openFindings.filter((item) => !String(item.owner || "").trim()).length,
+    inspectionOwnerCoverageRate: inspections.filter((item) => item.status !== "cancelled").length
+      ? inspections.filter((item) => item.status !== "cancelled" && String(item.owner || "").trim()).length /
+        inspections.filter((item) => item.status !== "cancelled").length
+      : null
   };
 }
 
