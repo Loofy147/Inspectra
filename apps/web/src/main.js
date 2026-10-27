@@ -1,5 +1,5 @@
 import {
-  calculateKpis, closeAction, createEvidenceReviewEvent, isActionOverdue, isAuditOverdue, isInspectionOverdue,
+  calculateKpis, closeAction, isActionOverdue, isAuditOverdue, isInspectionOverdue, recordEvidenceReviewTransition,
   isValidDateInput, isValidReportingMonth, reviewEvidence, searchWorkspaceRecords, toCsv,
   transitionAudit, transitionInspection, validateWorkspaceData, verifyFinding
 } from "./domain.js";
@@ -1233,29 +1233,20 @@ function createEvidence(form) {
 function finishEvidenceReview(form) {
   const formData = new FormData(form);
   const data = currentData();
-  const evidence = (data.evidence || []).find((item) => item.id === modalState?.id);
-  const updated = reviewEvidence(
-    evidence,
+  const transition = recordEvidenceReviewTransition(
+    data,
+    modalState?.id,
     modalState?.target,
     formData.get("reviewNote"),
     formData.get("reviewer"),
+    nextId("EVR", data.evidenceReviewEvents || []),
     new Date()
   );
-  const event = createEvidenceReviewEvent(evidence, updated, nextId("EVR", data.evidenceReviewEvents || []));
-  const candidate = {
-    ...data,
-    evidence: (data.evidence || []).map((item) => item.id === evidence.id ? updated : item),
-    evidenceReviewEvents: [...(data.evidenceReviewEvents || []), event]
-  };
-  assertCandidateIntegrity(candidate, [
-    { collection: "evidence", id: evidence.id },
-    { collection: "evidenceReviewEvents", id: event.id }
-  ]);
-  Object.assign(evidence, updated);
-  if (!Array.isArray(data.evidenceReviewEvents)) data.evidenceReviewEvents = [];
-  data.evidenceReviewEvents.push(event);
-  addActivity("reviewed", "evidence", evidence.id, "Evidence reference review state changed to " + evidence.reviewStatus);
-  modalState = { type: "evidence-detail", id: evidence.id };
+  data.evidence = transition.data.evidence;
+  data.evidenceReviewEvents = transition.data.evidenceReviewEvents;
+  addActivity("reviewed", "evidence", transition.evidence.id,
+    "Evidence reference review state changed to " + transition.evidence.reviewStatus);
+  modalState = { type: "evidence-detail", id: transition.evidence.id };
   persistAndRender("Evidence reference review and history event recorded in this browser-local demo.");
 }
 

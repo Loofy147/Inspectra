@@ -196,6 +196,35 @@ export function createEvidenceReviewEvent(previousEvidence, updatedEvidence, eve
   };
 }
 
+export function recordEvidenceReviewTransition(data, evidenceId, targetState, reviewNote, reviewer, eventId, now = new Date()) {
+  if (!data || !Array.isArray(data.evidence)) throw new Error("Evidence register is unavailable.");
+  const previousEvidence = data.evidence.find((item) => item?.id === evidenceId);
+  if (!previousEvidence) throw new Error("Evidence record not found.");
+  if (data.evidenceReviewEvents !== undefined && !Array.isArray(data.evidenceReviewEvents)) {
+    throw new Error("Evidence review history is malformed; refusing to overwrite it.");
+  }
+  const updatedEvidence = reviewEvidence(previousEvidence, targetState, reviewNote, reviewer, now);
+  const event = createEvidenceReviewEvent(previousEvidence, updatedEvidence, eventId);
+  const existingEvents = data.evidenceReviewEvents || [];
+  const candidate = {
+    ...data,
+    evidence: data.evidence.map((item) => item.id === evidenceId ? updatedEvidence : item),
+    evidenceReviewEvents: [...existingEvents, event]
+  };
+
+  const validation = validateWorkspaceData(candidate);
+  const touched = new Set([
+    "evidence:" + String(evidenceId),
+    "evidenceReviewEvents:" + String(event.id)
+  ]);
+  const blocking = validation.issues.filter((issue) => touched.has(issue.collection + ":" + issue.recordId));
+  if (blocking.length) {
+    const details = blocking.slice(0, 3).map((issue) => issue.message);
+    throw new Error("This evidence review cannot be recorded. " + details.join(" "));
+  }
+  return { data: candidate, evidence: updatedEvidence, event };
+}
+
 function csvCell(value) {
   let text = value == null ? "" : String(value);
   // Prevent formula execution when text fields are opened in spreadsheet software.

@@ -9,13 +9,14 @@
 ## 2. Compatibility and state update
 
 - [x] **2.1** Extend browser-local snapshot migration to initialize a missing `evidenceReviewEvents` collection without resetting existing evidence records; verify a legacy-shaped snapshot loads with the expected records and an empty history array.
-- [x] **2.2** Update the evidence-review handler to append exactly one event alongside the evidence state/version transition in the same workspace snapshot; verify accepted, rejected and superseded transitions create exactly one event each.
-- [x] **2.3** Verify invalid review attempts leave both the evidence record and history collection unchanged; verify browser-storage failure is surfaced without a success message.
+- [x] **2.2** Update the evidence-review handler to append exactly one event alongside the evidence state/version transition in the same workspace snapshot; direct domain tests cover accepted, rejected and superseded transitions.
+- [x] **2.3** Verify invalid domain review attempts leave evidence and review history unchanged; this is covered by a pure-operation regression test.
+- [ ] **2.4** Verify the browser-storage failure path in a live browser and confirm the UI reports the save failure instead of the success message.
 
 ## 3. User-facing history
 
-- [x] **3.1** Render the read-only evidence review timeline newest-first with state transition, reviewer, timestamp, rationale and version change; verify ordering and field visibility from a seeded and a newly reviewed record.
-- [x] **3.2** Render the empty/migrated-history explanation and browser-local/tamperability limitation; verify it does not infer historical events from the latest review fields and provides no edit/delete controls.
+- [ ] **3.1** Verify the rendered history in a live browser with seeded and newly reviewed records, including ordering, field visibility and mobile layout; source inspection confirms newest-first sorting, but browser rendering has not been exercised.
+- [x] **3.2** Implement and inspect the empty/migrated-history explanation and browser-local/tamperability limitation; unit tests verify migration does not infer history from latest review fields, and the history markup provides no edit/delete controls.
 
 ## 4. Documentation and release verification
 

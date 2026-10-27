@@ -2,7 +2,7 @@ import { createDemoState } from "../src/seed.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  calculateKpis, closeAction, createEvidenceReviewEvent, isActionOverdue, isInspectionOverdue,
+  calculateKpis, closeAction, createEvidenceReviewEvent, isActionOverdue, isInspectionOverdue, recordEvidenceReviewTransition,
   isValidDateInput, isValidReportingMonth, reviewEvidence, searchWorkspaceRecords, toCsv,
   transitionInspection, validateWorkspaceData, verifyFinding
 } from "../src/domain.js";
@@ -223,6 +223,53 @@ test("evidence review events capture the validated transition without mutating e
     accepted, { ...accepted, reviewStatus: "rejected", version: 3 }, "EVR-TEST-2"
   ), /transition|version/i);
   assert.throws(() => createEvidenceReviewEvent(pending, accepted, ""), /stable.*ID/i);
+});
+
+test("accepted, rejected and superseded transitions each append one event atomically", () => {
+  const original = createDemoState();
+  const originalEventCount = original.evidenceReviewEvents.length;
+
+  const accepted = recordEvidenceReviewTransition(
+    original, "EVD-001", "accepted", "Acceptance source checked", "Maya Chen", "EVR-FLOW-ACCEPT", fixedNow
+  );
+  assert.equal(accepted.data.evidenceReviewEvents.length, originalEventCount + 1);
+  assert.equal(accepted.event.fromState, "pending_review");
+  assert.equal(accepted.event.toState, "accepted");
+  assert.equal(accepted.data.evidence.find((item) => item.id === "EVD-001").reviewStatus, "accepted");
+  assert.equal(original.evidence.find((item) => item.id === "EVD-001").reviewStatus, "pending_review");
+  assert.equal(original.evidenceReviewEvents.length, originalEventCount);
+
+  const acceptedThenSuperseded = recordEvidenceReviewTransition(
+    accepted.data, "EVD-001", "superseded", "Newer accepted reference supersedes this one",
+    "Maya Chen", "EVR-FLOW-SUPERSEDE-A", at("2026-10-26T12:01:00.000Z")
+  );
+  assert.equal(acceptedThenSuperseded.data.evidenceReviewEvents.length, originalEventCount + 2);
+  assert.equal(acceptedThenSuperseded.event.fromState, "accepted");
+  assert.equal(acceptedThenSuperseded.event.toState, "superseded");
+
+  const rejected = recordEvidenceReviewTransition(
+    original, "EVD-001", "rejected", "Source lacks required revision detail", "Maya Chen",
+    "EVR-FLOW-REJECT", fixedNow
+  );
+  assert.equal(rejected.data.evidenceReviewEvents.length, originalEventCount + 1);
+  assert.equal(rejected.event.toState, "rejected");
+
+  const rejectedThenSuperseded = recordEvidenceReviewTransition(
+    rejected.data, "EVD-001", "superseded", "New evidence reference replaces the rejected item",
+    "Maya Chen", "EVR-FLOW-SUPERSEDE-R", at("2026-10-26T12:02:00.000Z")
+  );
+  assert.equal(rejectedThenSuperseded.data.evidenceReviewEvents.length, originalEventCount + 2);
+  assert.equal(rejectedThenSuperseded.event.fromState, "rejected");
+  assert.equal(rejectedThenSuperseded.event.toState, "superseded");
+});
+
+test("failed evidence review transitions leave evidence and review history unchanged", () => {
+  const data = createDemoState();
+  const before = JSON.stringify(data);
+  assert.throws(() => recordEvidenceReviewTransition(
+    data, "EVD-002", "rejected", "Attempting an invalid transition", "Maya Chen", "EVR-INVALID", fixedNow
+  ), /transition is not allowed/i);
+  assert.equal(JSON.stringify(data), before);
 });
 
 test("evidence review event integrity detects invalid links, transitions, versions and provenance", () => {
