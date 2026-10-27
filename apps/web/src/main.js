@@ -1,6 +1,6 @@
 import {
   calculateKpis, closeAction, isActionOverdue, isAuditOverdue, isInspectionOverdue, recordEvidenceReviewTransition,
-  isValidDateInput, isValidReportingMonth, reviewEvidence, searchWorkspaceRecords, toCsv,
+  isValidDateInput, isValidReportingMonth, searchWorkspaceRecords, toCsv,
   transitionAudit, transitionInspection, validateWorkspaceData, verifyFinding
 } from "./domain.js";
 import { createDemoState, dateInputAt, dateAt, makeChecklist } from "./seed.js";
