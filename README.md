@@ -8,6 +8,12 @@ The repository contains a browser-run core interface and domain-rule tests. The 
 
 Do not use the current demo workspace as the system of record for safety-critical or regulated operations.
 
+## Production readiness status
+
+**Production readiness is not established.** The current application remains a browser-local demo without a production API/database, trusted identity and server-side authorization, shared persistence, or managed evidence-file storage. Passing domain tests is necessary but does not establish production readiness.
+
+Use the [Production Readiness Checklist](docs/production-readiness-checklist.md) as the blocking acceptance register. Do not mark the product production-ready until required gates are passed with linked evidence, reviewers and residual-risk decisions.
+
 ## Run locally
 
 Requires Node.js 22 or later. No third-party runtime packages are required for the current shell.
@@ -71,6 +77,7 @@ These are domain-neutral workflows, not sector-specific compliance packs. Indust
 - [Core architecture](docs/core-architecture.md)
 - [Security and assurance model](docs/security-and-assurance-model.md)
 - [Implementation roadmap](docs/roadmap.md)
+- [Production readiness checklist](docs/production-readiness-checklist.md)
 
 ## Research anchors
 

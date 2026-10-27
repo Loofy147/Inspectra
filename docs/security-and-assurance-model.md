@@ -1,7 +1,7 @@
 # Security and Assurance Model
 
 **Status:** Design baseline, not a security certification  
-**Prepared:** 2026-10-26
+**Prepared:** 2026-10-27
 
 ## 1. Trust boundaries
 
@@ -82,6 +82,7 @@ Current shell boundary: data and activity are stored in one browser profile. The
 Use OWASP ASVS 5.0.0 as a requirements catalogue for application security verification, tailored to actual exposure and risk. The current frontend alone cannot satisfy a full server/auth/storage assurance assessment because those components are not yet connected.
 
 Minimum pre-production evidence:
+- Complete the cross-cutting [Production Readiness Checklist](production-readiness-checklist.md), recording results and evidence for every applicable gate.
 - automated authorization tests for every resource family and state transition;
 - negative cross-tenant tests;
 - schema/validation and KPI formula tests;
@@ -94,7 +95,9 @@ Minimum pre-production evidence:
 
 ## 5. References
 
-- [OWASP Application Security Verification Standard — stable 5.0.0](https://asvs.owasp.org/) — a security requirements and verification framework, not a certificate in itself.
+- [OWASP Application Security Verification Standard — stable 5.0.0 at review time](https://asvs.owasp.org/) — a security requirements and verification framework, not a certificate in itself.
+- [OWASP Top 10](https://owasp.org/projects/top-ten) — threat-awareness reference, not a substitute for application-specific verification.
+- [NIST Secure Software Development Framework](https://csrc.nist.gov/projects/ssdf) — secure development practices; record whether a selected publication is final or draft.
 - [Supabase product security guidance](https://supabase.com/docs/guides/security/product-security.md) — apply if Supabase is selected; revisit current guidance before integration.
 - [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/) — accessibility requirements and test reference.
 - [ISO 45004:2024](https://www.iso.org/standard/64285.html) — performance measurement principles relevant to balanced indicators.

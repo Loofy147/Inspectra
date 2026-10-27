@@ -3,6 +3,8 @@
 **Status:** Implemented browser-local metadata prototype; managed file storage is not implemented  
 **Scope:** Sector-neutral operational assurance core
 
+**Production gate:** This feature-specific checklist is necessary but not sufficient for release. The cross-cutting [Production Readiness Checklist](production-readiness-checklist.md) controls the overall release decision.
+
 ## Purpose
 
 An evidence reference records what a supporting item is, who recorded it, when it was captured, where it came from, which operational record it supports, and whether the reference has been reviewed.
@@ -67,4 +69,4 @@ Before managed evidence storage is enabled, implementation must define and verif
 - Safe failure states for incomplete upload, retry, duplicate submission, unavailable storage, permission denial and malware rejection.
 - Tests proving tenant isolation, unauthorized denial, tamper detection where required, reproducible exports and recovery behavior.
 
-These are production requirements, not claims about current functionality.
+These are production requirements, not claims about current functionality. Passing the current browser-local evidence-history tests does not satisfy these gates; implementation evidence must come from the trusted production path and the exact release candidate.
