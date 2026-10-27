@@ -27,9 +27,9 @@ Search only covers the current browser-local demo dataset. It does not search ot
 
 ## Evidence references
 
-The Evidence workspace records metadata references and links them to inspections, findings, corrective actions, audits, management reviews, sites, assets, risks and contractors. Open a record to see linked references, record a source reference, and capture a review decision with a named reviewer and rationale. The metadata register can be exported as CSV.
+The Evidence workspace records metadata references and links them to inspections, findings, corrective actions, audits, management reviews, sites, assets, risks and contractors. Open a record to see linked references, record a source reference, capture a review decision, and inspect the recorded review-transition history. The metadata register can be exported as CSV. History exists only in this browser-local workspace snapshot; older snapshots are not backfilled with invented events, and reviewer labels are not authenticated identities.
 
-**This is not file storage.** No attachment is uploaded or stored. An accepted reference is not proof that the underlying file exists, is genuine, current, or sufficient. Keep sensitive information and credentials out of the browser demo.
+**This is not file storage or a production audit log.** No attachment is uploaded or stored. Browser-local review history can be edited or deleted; it is not tamper-proof. An accepted reference is not proof that the underlying file exists, is genuine, current, or sufficient. Keep sensitive information and credentials out of the browser demo.
 
 See [Evidence traceability model and production gates](docs/evidence-traceability.md) for the record contract, review lifecycle, limitations and requirements before managed storage is introduced.
 

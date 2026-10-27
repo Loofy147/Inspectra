@@ -61,6 +61,12 @@ In evidence details, render a compact chronological review history with old stat
 - If browser persistence fails, surface the existing storage failure state. Do not imply the new event is durably saved.
 - If an event is malformed or has a broken evidence link, report it through System Health rather than silently treating it as valid audit evidence.
 
+## Implementation result on the draft branch
+
+The prototype implementation adds `evidenceReviewEvents` to workspace data, seeds two explicitly illustrative events for the existing accepted/rejected samples, validates event state/version/source metadata and evidence links, and migrates snapshots missing the collection to an empty array. The review handler validates a candidate snapshot before mutating current evidence and appends one event beside the new evidence state. Evidence details render events newest-first and explain the browser-local and unauthenticated identity limitations.
+
+The general activity feed remains supplementary and is not used as the canonical review history.
+
 ## Verification strategy
 
 - Unit tests for accepted, rejected and superseded transitions; event construction; invalid transitions; event uniqueness; malformed metadata; broken evidence links; version mismatch; migration with missing event collection.

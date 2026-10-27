@@ -26,6 +26,7 @@ A checklist item is complete only when a linked artifact or test exists and has 
 - [x] Cross-register search with keyboard access, linked-site matching, and tests for core registers.
 - [x] Browser-local record-integrity diagnostics and pre-save checks for core creation flows, covered by domain tests.
 - [x] Metadata-only evidence references linked to operational records, with provenance, review states, register export, integrity checks and tests; managed file storage remains deferred.
+- [x] Browser-local evidence-review transition history captures each new valid state change, reviewer label, timestamp, rationale and version increment; legacy snapshots are migrated without fabricating historical events. This is not a tamper-proof or production audit log.
 - [ ] Responsive, keyboard-usable work queue and record-detail flows.
 - [ ] Clear demo, local-only, empty, stale, incomplete, and error states.
 

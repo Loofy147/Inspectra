@@ -1,5 +1,5 @@
 import {
-  calculateKpis, closeAction, isActionOverdue, isAuditOverdue, isInspectionOverdue,
+  calculateKpis, closeAction, createEvidenceReviewEvent, isActionOverdue, isAuditOverdue, isInspectionOverdue,
   isValidDateInput, isValidReportingMonth, reviewEvidence, searchWorkspaceRecords, toCsv,
   transitionAudit, transitionInspection, validateWorkspaceData, verifyFinding
 } from "./domain.js";
@@ -791,6 +791,16 @@ function renderModal() {
     const reviewTrail = currentReviewState === "pending_review"
       ? '<div class="integrity-warning"><strong>Review pending</strong><div>The origin is recorded, but no review decision has been made.</div></div>'
       : '<div class="integrity-ok"><strong>Review state: ' + esc(displayStatus(currentReviewState)) + '</strong><div>' + esc((evidence.reviewedBy || "Reviewer not recorded") + " · " + (evidence.reviewedAt ? formatDateTime(evidence.reviewedAt) : "Time not recorded")) + '</div><p class="page-subtitle">' + esc(evidence.reviewNote || "No rationale recorded.") + '</p></div>';
+    const reviewEvents = (d.evidenceReviewEvents || []).filter((event) => event.evidenceId === evidence.id)
+      .slice().sort((a, b) => new Date(b.reviewedAt) - new Date(a.reviewedAt));
+    const reviewHistory = reviewEvents.length
+      ? '<div class="evidence-ref-list">' + reviewEvents.map((event) =>
+          '<div class="exception-row"><div class="exception-copy"><div class="exception-title">' +
+          esc(displayStatus(event.fromState) + " → " + displayStatus(event.toState)) + '</div><div class="exception-meta">' +
+          esc(event.reviewedBy + " · " + formatDateTime(event.reviewedAt) + " · version " + event.fromVersion + " → " + event.toVersion) +
+          '</div><p class="field-note top-space">' + esc(event.reviewNote) + '</p></div></div>'
+        ).join("") + '</div>'
+      : emptyState("No review transition history", "No transition event is recorded in this workspace snapshot. Past decisions are not inferred from the current review fields.");
     let reviewActions = "";
     if (currentReviewState === "pending_review") {
       reviewActions = '<button class="button" type="button" data-review-evidence="' + esc(evidence.id) + '" data-evidence-target="rejected">Reject reference</button>' +
@@ -809,7 +819,8 @@ function renderModal() {
       '<div class="modal-section-title">Origin and context</div><p class="page-subtitle">' + esc(evidence.sourceDescription) + '</p>' +
       '<div class="modal-section-title">Source reference</div><p class="page-subtitle">' + esc(evidence.sourceReference || "No external source identifier recorded.") + '</p>' +
       '<div class="modal-section-title">Review decision</div>' + reviewTrail +
-      '<p class="field-note top-space">An accepted reference is not independent proof that underlying evidence is genuine, accessible, current, or sufficient.</p>',
+      '<div class="modal-section-title">Review history · ' + reviewEvents.length + '</div>' + reviewHistory +
+      '<p class="field-note top-space">History is stored in this browser-local demo and can be altered or removed. Reviewer names are entered labels, not authenticated identities. An accepted reference is not independent proof that underlying evidence is genuine, accessible, current, or sufficient.</p>',
       '<button class="button" type="button" data-close-dialog>Close</button>' + reviewActions, true);
   }
 
@@ -1220,19 +1231,32 @@ function createEvidence(form) {
 }
 
 function finishEvidenceReview(form) {
-  const data = new FormData(form);
-  const evidence = (currentData().evidence || []).find((item) => item.id === modalState?.id);
+  const formData = new FormData(form);
+  const data = currentData();
+  const evidence = (data.evidence || []).find((item) => item.id === modalState?.id);
   const updated = reviewEvidence(
     evidence,
     modalState?.target,
-    data.get("reviewNote"),
-    data.get("reviewer"),
+    formData.get("reviewNote"),
+    formData.get("reviewer"),
     new Date()
   );
+  const event = createEvidenceReviewEvent(evidence, updated, nextId("EVR", data.evidenceReviewEvents || []));
+  const candidate = {
+    ...data,
+    evidence: (data.evidence || []).map((item) => item.id === evidence.id ? updated : item),
+    evidenceReviewEvents: [...(data.evidenceReviewEvents || []), event]
+  };
+  assertCandidateIntegrity(candidate, [
+    { collection: "evidence", id: evidence.id },
+    { collection: "evidenceReviewEvents", id: event.id }
+  ]);
   Object.assign(evidence, updated);
+  if (!Array.isArray(data.evidenceReviewEvents)) data.evidenceReviewEvents = [];
+  data.evidenceReviewEvents.push(event);
   addActivity("reviewed", "evidence", evidence.id, "Evidence reference review state changed to " + evidence.reviewStatus);
   modalState = { type: "evidence-detail", id: evidence.id };
-  persistAndRender("Evidence reference review recorded in this browser-local demo.");
+  persistAndRender("Evidence reference review and history event recorded in this browser-local demo.");
 }
 
 function createAudit(form) {

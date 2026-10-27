@@ -2,7 +2,7 @@ import { createDemoState } from "../src/seed.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  calculateKpis, closeAction, isActionOverdue, isInspectionOverdue,
+  calculateKpis, closeAction, createEvidenceReviewEvent, isActionOverdue, isInspectionOverdue,
   isValidDateInput, isValidReportingMonth, reviewEvidence, searchWorkspaceRecords, toCsv,
   transitionInspection, validateWorkspaceData, verifyFinding
 } from "../src/domain.js";
@@ -11,6 +11,7 @@ import {
   createManagementFollowUp, startManagementReview, completeManagementReview,
   isAuditOverdue, transitionAudit
 } from "../src/domain.js";
+import { migrateWorkspaceData } from "../src/store.js";
 
 const at = (iso) => new Date(iso);
 const fixedNow = at("2026-10-26T12:00:00.000Z");
@@ -132,7 +133,7 @@ test("the seeded demo workspace passes record-integrity checks", () => {
   const result = validateWorkspaceData(createDemoState());
   assert.equal(result.valid, true, JSON.stringify(result.issues, null, 2));
   assert.equal(result.issueCount, 0);
-  assert.equal(result.recordCount, 56);
+  assert.equal(result.recordCount, 58);
 });
 
 test("record-integrity checks identify missing fields, invalid dates, duplicate IDs and broken links", () => {
@@ -202,6 +203,59 @@ test("evidence review transitions require a rationale and reviewer", () => {
   assert.throws(() => reviewEvidence(accepted, "rejected", "The reference is now rejected", "Maya Chen", fixedNow), /transition is not allowed/i);
   const superseded = reviewEvidence(accepted, "superseded", "A newer reference replaced this one", "Maya Chen", fixedNow);
   assert.equal(superseded.reviewStatus, "superseded");
+});
+
+test("evidence review events capture the validated transition without mutating evidence", () => {
+  const pending = { id: "EVD-HISTORY-1", reviewStatus: "pending_review", version: 1 };
+  const accepted = reviewEvidence(
+    pending, "accepted", "Reference checked against the stated source", "Maya Chen", fixedNow
+  );
+  const event = createEvidenceReviewEvent(pending, accepted, "EVR-TEST-1");
+  assert.deepEqual(event, {
+    id: "EVR-TEST-1", evidenceId: "EVD-HISTORY-1",
+    fromState: "pending_review", toState: "accepted",
+    reviewedAt: fixedNow.toISOString(), reviewedBy: "Maya Chen",
+    reviewNote: "Reference checked against the stated source",
+    fromVersion: 1, toVersion: 2, source: "browser-local-demo"
+  });
+  assert.equal(pending.reviewStatus, "pending_review");
+  assert.throws(() => createEvidenceReviewEvent(
+    accepted, { ...accepted, reviewStatus: "rejected", version: 3 }, "EVR-TEST-2"
+  ), /transition|version/i);
+  assert.throws(() => createEvidenceReviewEvent(pending, accepted, ""), /stable.*ID/i);
+});
+
+test("evidence review event integrity detects invalid links, transitions, versions and provenance", () => {
+  const data = createDemoState();
+  assert.equal(validateWorkspaceData(data).valid, true);
+  const event = data.evidenceReviewEvents[0];
+  event.evidenceId = "EVD-MISSING";
+  event.toState = "pending_review";
+  event.reviewedBy = " ";
+  event.reviewNote = "short";
+  event.fromVersion = 3;
+  event.toVersion = 3;
+  event.source = "remote";
+  const result = validateWorkspaceData(data);
+  assert.ok(result.issues.some((issue) => issue.code === "broken_evidence_review_event_link" && issue.recordId === event.id));
+  assert.ok(result.issues.some((issue) => issue.code === "invalid_evidence_review_event_transition" && issue.recordId === event.id));
+  assert.ok(result.issues.some((issue) => issue.code === "invalid_evidence_review_event_version" && issue.recordId === event.id));
+  assert.ok(result.issues.some((issue) => issue.code === "short_evidence_review_event_note" && issue.recordId === event.id));
+  assert.ok(result.issues.some((issue) => issue.code === "invalid_evidence_review_event_source" && issue.recordId === event.id));
+  assert.ok(result.issues.some((issue) => issue.code === "missing_required_field" && issue.recordId === event.id && issue.field === "reviewedBy"));
+});
+
+test("legacy workspace migration initializes missing review history without inferring past events", () => {
+  const legacyData = createDemoState();
+  const originalEvidence = legacyData.evidence;
+  const priorReviewAt = legacyData.evidence[1].reviewedAt;
+  delete legacyData.evidenceReviewEvents;
+  const migrated = migrateWorkspaceData(legacyData);
+  assert.deepEqual(migrated.evidenceReviewEvents, []);
+  assert.equal(migrated.evidence, originalEvidence);
+  assert.equal(migrated.evidence[1].reviewStatus, "accepted");
+  assert.equal(migrated.evidence[1].reviewedBy, "Maya Chen");
+  assert.equal(migrated.evidence[1].reviewedAt, priorReviewAt);
 });
 
 test("reporting months must be real months in YYYY-MM format", () => {

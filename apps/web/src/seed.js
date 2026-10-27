@@ -184,11 +184,27 @@ export function createDemoState() {
       version: 2
     }
   ];
+  const evidenceReviewEvents = [
+    {
+      id: "EVR-0001", evidenceId: "EVD-002",
+      fromState: "pending_review", toState: "accepted",
+      reviewedAt: dateAt(-2, 10), reviewedBy: "Maya Chen",
+      reviewNote: "The reference is understandable for this sample workflow.",
+      fromVersion: 1, toVersion: 2, source: "browser-local-demo"
+    },
+    {
+      id: "EVR-0002", evidenceId: "EVD-003",
+      fromState: "pending_review", toState: "rejected",
+      reviewedAt: dateAt(-2, 11), reviewedBy: "Maya Chen",
+      reviewNote: "The reference is missing an approved revision identifier.",
+      fromVersion: 1, toVersion: 2, source: "browser-local-demo"
+    }
+  ];
   const activity = [
     { id: "EVT-001", at: dateAt(0, 9), actor: "Demo operator", action: "recorded", entityType: "inspection", entityId: "INS-0103", summary: "Checklist progress saved for Monthly equipment safety review" },
     { id: "EVT-002", at: dateAt(-1, 14), actor: "Demo operator", action: "created", entityType: "finding", entityId: "FND-0204", summary: "Racking beam deformation reported" },
     { id: "EVT-003", at: dateAt(-2, 11), actor: "Demo operator", action: "resolved", entityType: "action", entityId: "ACT-0303", summary: "PPE signage action resolved (sample event)" },
     { id: "EVT-004", at: dateAt(-3, 10), actor: "Demo operator", action: "completed", entityType: "inspection", entityId: "INS-0101", summary: "Forklift pre-operation audit completed" }
   ];
-  return { sites, assets, inspections, findings, actions, risks, audits, requirements, people, contractors, reviews, evidence, activity };
+  return { sites, assets, inspections, findings, actions, risks, audits, requirements, people, contractors, reviews, evidence, evidenceReviewEvents, activity };
 }
