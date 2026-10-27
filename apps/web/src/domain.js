@@ -346,6 +346,26 @@ export function validateWorkspaceData(data) {
     }
   }
 
+  for (const action of recordsByCollection.get("actions") || []) {
+    if (!action || typeof action !== "object" || !isNonEmpty(action.id)) continue;
+    if (isNonEmpty(action.findingId)) {
+      const finding = (collectionMaps.get("findings") || new Map()).get(String(action.findingId));
+      if (finding && Array.isArray(finding.actionIds) && !finding.actionIds.includes(action.id)) {
+        addIssue("actions", action, "missing_inverse_action_link", "findingId",
+          "The corrective action links to a finding that does not list this action.",
+          "Add the action ID to the finding's linked actions or remove the incorrect action link.");
+      }
+    }
+    if (isNonEmpty(action.reviewId)) {
+      const review = (collectionMaps.get("reviews") || new Map()).get(String(action.reviewId));
+      if (review && Array.isArray(review.decisionActionIds) && !review.decisionActionIds.includes(action.id)) {
+        addIssue("actions", action, "missing_inverse_review_link", "reviewId",
+          "The follow-up action links to a review that does not list this action.",
+          "Add the action ID to the review's follow-ups or correct the review link.");
+      }
+    }
+  }
+
   for (const review of recordsByCollection.get("reviews") || []) {
     if (!review || typeof review !== "object" || !Array.isArray(review.decisionActionIds)) continue;
     const actionMap = collectionMaps.get("actions") || new Map();
