@@ -1,7 +1,7 @@
 import {
   calculateKpis, closeAction, isActionOverdue, isAuditOverdue, isInspectionOverdue,
-  isValidDateInput, isValidReportingMonth, searchWorkspaceRecords, toCsv, transitionAudit,
-  transitionInspection, validateWorkspaceData, verifyFinding
+  isValidDateInput, isValidReportingMonth, reviewEvidence, searchWorkspaceRecords, toCsv,
+  transitionAudit, transitionInspection, validateWorkspaceData, verifyFinding
 } from "./domain.js";
 import { createDemoState, dateInputAt, dateAt, makeChecklist } from "./seed.js";
 import { loadWorkspace, resetWorkspace, saveWorkspace } from "./store.js";
@@ -1015,6 +1015,16 @@ function onClick(event) {
   if (target.closest("[data-create-inspection]")) { openModal("create-inspection"); return; }
   if (target.closest("[data-create-finding]")) { openModal("create-finding"); return; }
   if (target.closest("[data-create-audit]")) { openModal("create-audit"); return; }
+  if (target.closest("[data-create-evidence]")) { openModal("create-evidence"); return; }
+  const openEvidenceButton = target.closest("[data-open-evidence]");
+  if (openEvidenceButton) { openModal("evidence-detail", openEvidenceButton.dataset.openEvidence); return; }
+  const reviewEvidenceButton = target.closest("[data-review-evidence]");
+  if (reviewEvidenceButton) {
+    openModal("review-evidence", reviewEvidenceButton.dataset.reviewEvidence);
+    modalState.target = reviewEvidenceButton.dataset.evidenceTarget;
+    render();
+    return;
+  }
   const openAuditButton = target.closest("[data-open-audit]");
   if (openAuditButton) { openModal("audit-detail", openAuditButton.dataset.openAudit); return; }
   const startAuditButton = target.closest("[data-start-audit]");
@@ -1124,6 +1134,67 @@ function onClick(event) {
   }
 }
 
+
+
+function createEvidence(form) {
+  const data = new FormData(form);
+  const title = String(data.get("title") || "").trim();
+  const evidenceType = String(data.get("evidenceType") || "");
+  const linked = String(data.get("linkedRecord") || "");
+  const capturedDate = String(data.get("capturedDate") || "");
+  const capturedBy = String(data.get("capturedBy") || "").trim();
+  const sourceDescription = String(data.get("sourceDescription") || "").trim();
+  const sourceReference = String(data.get("sourceReference") || "").trim();
+  const separator = linked.indexOf(":");
+  if (title.length < 3) throw new Error("Enter an evidence title of at least 3 characters.");
+  if (!evidenceType || separator < 1 || separator === linked.length - 1) throw new Error("Choose an evidence type and linked record.");
+  if (!capturedBy) throw new Error("Choose the person recording the reference.");
+  if (sourceDescription.length < 8) throw new Error("Describe the origin and context in at least 8 characters.");
+  const linkedEntityType = linked.slice(0, separator);
+  const linkedEntityId = linked.slice(separator + 1);
+  const evidence = {
+    id: nextId("EVD", currentData().evidence || []),
+    title,
+    evidenceType,
+    linkedEntityType,
+    linkedEntityId,
+    capturedAt: dateAtLocalHour(capturedDate, 12, "evidence capture date"),
+    capturedBy,
+    sourceDescription,
+    sourceReference,
+    storageMode: "metadata_only",
+    reviewStatus: "pending_review",
+    reviewNote: "",
+    reviewedAt: "",
+    reviewedBy: "",
+    version: 1
+  };
+  assertCandidateIntegrity({
+    ...currentData(),
+    evidence: [evidence, ...(currentData().evidence || [])]
+  }, [{ collection: "evidence", id: evidence.id }]);
+  currentData().evidence.unshift(evidence);
+  addActivity("created", "evidence", evidence.id, "Evidence reference recorded: " + evidence.title);
+  activePage = "evidence";
+  modalState = { type: "evidence-detail", id: evidence.id };
+  persistAndRender("Evidence reference saved for review. No file was uploaded.");
+}
+
+function finishEvidenceReview(form) {
+  const data = new FormData(form);
+  const evidence = (currentData().evidence || []).find((item) => item.id === modalState?.id);
+  const updated = reviewEvidence(
+    evidence,
+    modalState?.target,
+    data.get("reviewNote"),
+    data.get("reviewer"),
+    new Date()
+  );
+  Object.assign(evidence, updated);
+  addActivity("reviewed", "evidence", evidence.id, "Evidence reference review state changed to " + evidence.reviewStatus);
+  modalState = { type: "evidence-detail", id: evidence.id };
+  persistAndRender("Evidence reference review recorded in this browser-local demo.");
+}
 
 function createAudit(form) {
   const data = new FormData(form);
@@ -1319,6 +1390,8 @@ function onSubmit(event) {
   event.preventDefault();
   try {
     if (form.dataset.form === "create-inspection") createInspection(form);
+    if (form.dataset.form === "create-evidence") createEvidence(form);
+    if (form.dataset.form === "review-evidence") finishEvidenceReview(form);
     if (form.dataset.form === "create-audit") createAudit(form);
     if (form.dataset.form === "complete-audit") finishAudit(form);
     if (form.dataset.form === "create-finding") createFinding(form);
