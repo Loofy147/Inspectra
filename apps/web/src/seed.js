@@ -131,11 +131,64 @@ export function createDemoState() {
     { id: "CON-002", name: "Riverside Technical Services (sample)", service: "Equipment service", siteId: "SITE-002", credentialDueAt: dateAt(-4, 17), status: "review_required" },
     { id: "CON-003", name: "Westline Electrical (sample)", service: "Electrical service", siteId: "SITE-003", credentialDueAt: dateAt(7, 17), status: "current" }
   ];
+  const evidence = [
+    {
+      id: "EVD-001",
+      title: "Exit-route observation note (sample)",
+      evidenceType: "inspection_note",
+      linkedEntityType: "finding",
+      linkedEntityId: "FND-0201",
+      capturedAt: dateAt(-5, 10),
+      capturedBy: "Lina Moreau",
+      sourceDescription: "Illustrative note describing the sample exit-route observation. Validate against the original record before operational use.",
+      sourceReference: "DEMO-REF-EXIT-001",
+      storageMode: "metadata_only",
+      reviewStatus: "pending_review",
+      reviewNote: "",
+      reviewedAt: "",
+      reviewedBy: "",
+      version: 1
+    },
+    {
+      id: "EVD-002",
+      title: "Guarding verification note (sample)",
+      evidenceType: "photo_note",
+      linkedEntityType: "action",
+      linkedEntityId: "ACT-0302",
+      capturedAt: dateAt(-3, 14),
+      capturedBy: "Amir Haddad",
+      sourceDescription: "Illustrative reference for a guarding verification item. No image file is stored by this demo.",
+      sourceReference: "DEMO-REF-GUARD-002",
+      storageMode: "metadata_only",
+      reviewStatus: "accepted",
+      reviewNote: "The reference is understandable for this sample workflow.",
+      reviewedAt: dateAt(-2, 10),
+      reviewedBy: "Maya Chen",
+      version: 2
+    },
+    {
+      id: "EVD-003",
+      title: "Controlled procedure reference (sample)",
+      evidenceType: "document_reference",
+      linkedEntityType: "audit",
+      linkedEntityId: "AUD-002",
+      capturedAt: dateAt(-3, 9),
+      capturedBy: "Samir Ali",
+      sourceDescription: "Illustrative procedure-reference metadata. The source document and its revision are not validated or stored here.",
+      sourceReference: "DEMO-REF-DOC-003",
+      storageMode: "metadata_only",
+      reviewStatus: "rejected",
+      reviewNote: "The reference is missing an approved revision identifier.",
+      reviewedAt: dateAt(-2, 11),
+      reviewedBy: "Maya Chen",
+      version: 2
+    }
+  ];
   const activity = [
     { id: "EVT-001", at: dateAt(0, 9), actor: "Demo operator", action: "recorded", entityType: "inspection", entityId: "INS-0103", summary: "Checklist progress saved for Monthly equipment safety review" },
     { id: "EVT-002", at: dateAt(-1, 14), actor: "Demo operator", action: "created", entityType: "finding", entityId: "FND-0204", summary: "Racking beam deformation reported" },
     { id: "EVT-003", at: dateAt(-2, 11), actor: "Demo operator", action: "resolved", entityType: "action", entityId: "ACT-0303", summary: "PPE signage action resolved (sample event)" },
     { id: "EVT-004", at: dateAt(-3, 10), actor: "Demo operator", action: "completed", entityType: "inspection", entityId: "INS-0101", summary: "Forklift pre-operation audit completed" }
   ];
-  return { sites, assets, inspections, findings, actions, risks, audits, requirements, people, contractors, reviews, activity };
+  return { sites, assets, inspections, findings, actions, risks, audits, requirements, people, contractors, reviews, evidence, activity };
 }
