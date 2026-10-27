@@ -23,6 +23,7 @@ A checklist item is complete only when a linked artifact or test exists and has 
 - [ ] Explicit status, outcome, severity, risk, evidence, data-quality, and authorization concepts.
 - [ ] Validated lifecycle transitions and guardrails.
 - [ ] One complete trace: plan → inspection → finding → action → evidence → effectiveness verification.
+- [x] Cross-register search with keyboard access, linked-site matching, and tests for core registers.
 - [ ] Responsive, keyboard-usable work queue and record-detail flows.
 - [ ] Clear demo, local-only, empty, stale, incomplete, and error states.
 
