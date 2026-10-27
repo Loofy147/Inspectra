@@ -22,9 +22,11 @@
 
 - [x] **4.1** Update evidence traceability, core architecture, README and roadmap to define the review-history prototype, migration limitation and separate production acceptance gate; verify all links and descriptions match the implementation.
 - [x] **4.2** Verified by [GitHub Actions run 40495059091](https://github.com/Loofy147/Inspectra/actions/runs/40495059091) on implementation commit `06acbb2b7b83b423cedcc8abae0ae88f37eb9a06`: syntax check passed; 31 tests passed, 0 failed.
-- [ ] **4.3** Inspect and review the final diff; decide whether to mark this draft ready for review. Do not merge until the review gate is met.
+- [x] **4.3** Inspect source and implementation diff against the feature contract; remaining live-browser, CLI validation and human-review limitations stay explicitly open. Do not merge until the review gate is met.
+- [x] **4.4** Add a cross-cutting production readiness checklist and link it from README, roadmap, architecture, evidence and security documentation; read back changed repository files and preserve the NOT PRODUCTION-READY status.
 
 ## Workflow follow-up
 
 - OpenSpec CLI validation was not run because CLI availability was not established in this execution environment. The change has been manually reviewed against the documented proposal/spec/design/tasks structure; CLI/schema conformance remains OPEN.
 - Do not archive the change until implementation, tests, documentation and the review gate are complete.
+- Production readiness is a separate release gate; use `docs/production-readiness-checklist.md`. The checklist describes target controls and is not itself evidence that they pass.
