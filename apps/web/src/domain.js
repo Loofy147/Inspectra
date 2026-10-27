@@ -172,7 +172,7 @@ function isNonEmpty(value) {
   return value !== null && value !== undefined && String(value).trim() !== "";
 }
 
-function isValidDateInput(value) {
+function isValidCalendarDate(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(value + "T00:00:00.000Z");
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
@@ -392,13 +392,7 @@ export function validateWorkspaceData(data) {
 }
 
 export function isValidDateInput(value) {
-  return isValidDateInputValue(value);
-}
-
-function isValidDateInputValue(value) {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const parsed = new Date(value + "T00:00:00.000Z");
-  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  return isValidCalendarDate(value);
 }
 
 const SEARCHABLE_COLLECTIONS = [
