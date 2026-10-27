@@ -364,3 +364,9 @@ tbody tr:hover { background: #fbfcfe; }
   .evidence-ref-row { flex-wrap: wrap; align-items: flex-start; }
   .evidence-ref-copy { flex-basis: calc(100% - 12px); }
 }
+
+
+.pill--accepted { color: var(--green); background: var(--green-soft); }
+.pill--pending_review { color: var(--amber); background: var(--amber-soft); }
+.pill--rejected { color: var(--red); background: var(--red-soft); }
+.pill--superseded { color: #68778a; background: #f0f2f5; }
