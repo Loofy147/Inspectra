@@ -196,6 +196,14 @@ function getSearchText(item) {
     else if (value && typeof value === "object") Object.values(value).forEach(collect);
   };
   collect(item);
+  if (item?.linkedEntityType && item?.linkedEntityId) {
+    const config = evidenceEntityConfig[item.linkedEntityType];
+    const related = config ? (currentData()[config.collection] || []).find((record) => record.id === item.linkedEntityId) : null;
+    if (related) {
+      collect(related);
+      if (related.siteId) values.push(siteName(related.siteId));
+    }
+  }
   return values.join(" ").toLowerCase();
 }
 function applySearch(items) {
