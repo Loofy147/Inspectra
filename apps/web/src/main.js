@@ -631,7 +631,7 @@ function renderModal() {
       '<div class="field"><label for="auditOwner">Owner *</label><select id="auditOwner" name="owner" required>' + d.people.map((p) => '<option>' + esc(p.name) + '</option>').join("") + '</select></div>' +
       '<div class="field full"><label for="auditCriteria">Criteria / reference *</label><input id="auditCriteria" name="criteria" required maxlength="240" placeholder="Approved procedure or defined criteria reference"></div>' +
       '<div class="field"><label for="auditDueDate">Due date *</label><input type="date" id="auditDueDate" name="dueDate" value="' + esc(dateInputAt(7)) + '" required></div>' +
-      '</div><p class="field-note">Use approved criteria from the organization's controlled documents. No legal text or standards have been validated in this demo.</p>' +
+      '</div><p class="field-note">Use approved criteria from the organization controlled documents. No legal text or standards have been validated in this demo.</p>' +
       '<div class="modal-footer modal-inline-footer"><button class="button" type="button" data-close-dialog>Cancel</button><button class="button button-primary" type="submit">' + icon("plus") + ' Schedule audit</button></div></form>', "", true);
   }
 
