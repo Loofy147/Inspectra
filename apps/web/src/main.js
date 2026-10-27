@@ -1,6 +1,6 @@
 import {
   calculateKpis, closeAction, isActionOverdue, isAuditOverdue, isInspectionOverdue,
-  toCsv, transitionAudit, transitionInspection, verifyFinding
+  searchWorkspaceRecords, toCsv, transitionAudit, transitionInspection, verifyFinding
 } from "./domain.js";
 import { createDemoState, dateInputAt, dateAt, makeChecklist } from "./seed.js";
 import { loadWorkspace, resetWorkspace, saveWorkspace } from "./store.js";
@@ -44,7 +44,8 @@ const pageMeta = {
   people: ["People & suppliers", "View demo role coverage and contractor credential states.", "READINESS"],
   reviews: ["Management reviews", "Record review minutes, decisions, accountable owners and follow-up.", "GOVERNANCE & DECISIONS"],
   reports: ["Reports", "Export visible operational records and inspect metric definitions.", "EVIDENCE & REPORTING"],
-  system: ["System health", "Understand what is connected, what is local and what is not configured.", "PLATFORM STATUS"]
+  system: ["System health", "Understand what is connected, what is local and what is not configured.", "PLATFORM STATUS"],
+  search: ["Search results", "Search across the workspace registers and open a matching record.", "QUICK FIND"]
 };
 
 const iconPaths = {
@@ -515,8 +516,26 @@ function renderSystem() {
     '<p class="footer-note">Production readiness is NOT ESTABLISHED. No security assessment, tenant-isolation test, backup/restore exercise, live integration or evidence-storage verification has been performed by this demo interface.</p>';
 }
 
+function renderSearchResults() {
+  const results = searchWorkspaceRecords(currentData(), searchQuery);
+  const actionFor = (item) => {
+    if (item.openType) return '<button class="link-button" data-open-' + esc(item.openType) + '="' + esc(item.id) + '">Open record ' + icon("arrow") + '</button>';
+    return '<button class="link-button" data-page="' + esc(item.page) + '">Open register ' + icon("arrow") + '</button>';
+  };
+  const body = results.length
+    ? '<div class="table-wrap"><table><thead><tr><th>Record</th><th>Type</th><th>Site / location</th><th>Owner</th><th>Status</th><th></th></tr></thead><tbody>' +
+      results.map((item) => '<tr><td><div class="primary-cell">' + esc(item.title) + '</div><div class="secondary-cell">' + esc(item.id) + (item.dueAt ? ' · Due ' + esc(formatDate(item.dueAt, { year: true })) : '') + '</div></td>' +
+        '<td>' + esc(item.type) + '</td><td>' + esc(item.siteName || "—") + '</td><td>' + esc(item.owner || "Unassigned") + '</td><td>' + (item.status ? pill(item.status) : '—') + '</td><td>' + actionFor(item) + '</td></tr>').join("") +
+      '</tbody></table></div>'
+    : emptyState(searchQuery ? "No matching records" : "Search the workspace", searchQuery ? "Try a shorter term, an ID, a site, an owner or a status." : "Use the search box above to find inspections, findings, actions, audits, reviews, sites, assets, risks, people and suppliers.");
+  return pageHeading("Search results", searchQuery ? 'Results for "' + esc(searchQuery) + '" · ' + results.length + ' matching records' : "Find a record across all registers.", "QUICK FIND",
+    '<button class="button" type="button" data-clear-search>Clear search</button>') +
+    panel("Workspace search", "Matches come from current browser-local records; this does not search external systems.", body);
+}
+
 function renderPage() {
   switch (activePage) {
+    case "search": return renderSearchResults();
     case "overview": return renderOverview();
     case "queue": return renderQueue();
     case "inspections": return renderInspections();
@@ -749,7 +768,7 @@ function render() {
   app.innerHTML = '<div class="app-shell">' + renderSidebar() + '<div class="main-shell">' +
     '<header class="topbar"><div class="breadcrumb">Inspectra Core <span class="breadcrumb-separator">/</span> <strong>' + esc(meta[0]) + '</strong></div>' +
     '<div class="topbar-actions"><form class="search-box" id="searchForm" role="search">' + icon("search") +
-    '<input id="globalSearch" name="q" type="search" value="' + esc(searchQuery) + '" placeholder="Search records…" aria-label="Search records"><button class="link-button" type="submit" aria-label="Apply search">Search</button></form>' +
+    '<input id="globalSearch" name="q" type="search" value="' + esc(searchQuery) + '" placeholder="Search all records (Ctrl/⌘K)…" aria-label="Search all records"><button class="link-button" type="submit" aria-label="Search all registers">Search</button></form>' +
     '<div class="user-chip"><div class="avatar">DO</div><div class="user-details"><div class="user-name">Demo operator</div><div class="user-role">Local demo identity</div></div></div></div></header>' +
     '<main class="page-container"><div class="demo-banner">' + icon("info") + '<div><strong>Sample workspace · Browser-local data</strong><p>For product exploration and domain-rule testing only. No live sites, shared users, evidence storage or external systems are connected.</p></div></div>' +
     '<section id="page-content">' + renderPage() + '</section></main></div>' + renderModal() +
@@ -757,7 +776,12 @@ function render() {
     '</div>';
   const search = document.querySelector("#globalSearch");
   if (search) search.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && search.value) { search.value = ""; searchQuery = ""; render(); }
+    if (event.key === "Escape" && search.value) {
+      search.value = "";
+      searchQuery = "";
+      if (activePage === "search") activePage = "overview";
+      render();
+    }
   });
 }
 
@@ -778,11 +802,13 @@ function onClick(event) {
   if (!(target instanceof Element)) return;
   const pageButton = target.closest("[data-page]");
   if (pageButton) {
+    if (pageButton.classList.contains("nav-item")) searchQuery = "";
     activePage = pageButton.dataset.page;
     modalState = null;
     render();
     return;
   }
+  if (target.closest("[data-clear-search]")) { searchQuery = ""; activePage = "overview"; render(); return; }
   if (target.matches("[data-close-modal]")) { closeModal(); return; }
   if (target.closest("[data-close-dialog]")) { closeModal(); return; }
   if (target.closest("[data-create-inspection]")) { openModal("create-inspection"); return; }
@@ -1164,13 +1190,24 @@ app.addEventListener("submit", (event) => {
   if (event.target?.id === "searchForm") {
     event.preventDefault();
     searchQuery = String(new FormData(event.target).get("q") || "").trim();
+    activePage = searchQuery ? "search" : "overview";
     render();
     return;
   }
   onSubmit(event);
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && modalState) closeModal();
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    document.querySelector("#globalSearch")?.focus();
+    return;
+  }
+  if (event.key === "Escape" && modalState) { closeModal(); return; }
+  if (event.key === "Escape" && activePage === "search") {
+    searchQuery = "";
+    activePage = "overview";
+    render();
+  }
 });
 window.addEventListener("storage", (event) => {
   if (event.key === "inspectra.operational-assurance.demo.v1") {
