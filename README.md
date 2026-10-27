@@ -25,6 +25,14 @@ Requires Node.js 22 or later. No third-party runtime packages are required for t
 
 Search only covers the current browser-local demo dataset. It does not search other users' devices, external systems, or a shared production database.
 
+## Record integrity checks
+
+Open **System health** to inspect the current workspace for missing required values, malformed dates, duplicate IDs, broken links, site/asset mismatches, and inconsistent finding/action or review/follow-up relationships. Each reported issue includes a record identifier, a short explanation, and a suggested correction.
+
+New inspections, findings, audits, management reviews, and review follow-ups are checked before they are saved. Date inputs are also checked against the actual calendar, so impossible dates such as February 31 are rejected.
+
+These checks protect the structure of the current browser-local demo; they do not validate operational truth, legal compliance, or server-side security. A production system still needs authoritative database constraints and trusted backend validation.
+
 ## Shared core workspaces
 
 - Overview and measurement
