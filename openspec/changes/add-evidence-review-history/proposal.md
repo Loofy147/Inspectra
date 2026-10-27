@@ -1,8 +1,9 @@
 # Proposal: Add Evidence Review Decision History
 
-**Status:** Proposed; no implementation change included in this change set  
+**Status:** Implemented prototype on an open draft pull request; not merged  
 **Baseline commit inspected:** `867aae69d85503b1dbf462ed526c241244375d73`  
-**Baseline CI:** Inspectra core quality run `40491891888`, completed successfully on that commit
+**Implementation commit:** `b32c7fa0c759e8e1d638d439326b0c60637fe03b`  
+**Implementation CI:** [Run 40494472095](https://github.com/Loofy147/Inspectra/actions/runs/40494472095), successful; syntax check passed and all 29 tests passed
 
 ## Why
 
@@ -47,10 +48,10 @@ Browser storage remains user-editable and device-local. The data can be cleared 
 - **TARGET / BASELINE:** Inspectra `main`, commit `867aae69d85503b1dbf462ed526c241244375d73`
 - **SCOPE:** Evidence review lifecycle history in the current browser-local demo
 - **AUTHORIZATION:** User requested applying OpenSpec and valuable working assets to improve the engineering method; this record prepares the next already-discussed Inspectra milestone
-- **STATE:** PLANNED — reviewable change artifacts only; code is not implemented by this proposal
-- **EVIDENCE:** Current repository README, evidence traceability model, core architecture, roadmap, domain review function, UI review handler, latest successful CI run
-- **LIMITS / RESIDUAL RISKS:** Browser-local history is not tamper-proof or production-durable; CLI validation has not been run in this environment
-- **ROLLBACK:** Remove this unimplemented change folder or revise its artifacts before implementation
+- **STATE:** IMPLEMENTED ON DRAFT PR BRANCH; automated CI passed on implementation commit; not merged
+- **EVIDENCE:** Commit `b32c7fa0c759e8e1d638d439326b0c60637fe03b`; [CI run 40494472095](https://github.com/Loofy147/Inspectra/actions/runs/40494472095); syntax check and 29 passing tests; domain, UI, migration, seed and documentation diff
+- **LIMITS / RESIDUAL RISKS:** Browser-local history is not tamper-proof or production-durable; OpenSpec CLI validation and live browser visual verification remain OPEN; human review pending
+- **ROLLBACK:** Revert the feature commit on the draft branch or close the unmerged PR
 - **DATA BOUNDARY:** Professional / project / technical only
 - **DIGEST:** Git commit provides artifact revision; no cryptographic signature is claimed
 - **PREPARED BY:** ChatGPT (AI-assisted)
