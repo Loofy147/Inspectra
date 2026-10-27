@@ -542,7 +542,7 @@ function renderSystem() {
     ["Data source", "Illustrative sample records", "Current records are seeded for product testing, not connected to a live source.", "review_required"],
     ["Persistence", "Current browser only", "Changes are saved to browser local storage when available. No cross-device or multi-user sync.", "review_required"],
     ["Authentication", "Not configured", "The displayed demo operator is not an authenticated identity. No user access controls exist.", "attention_required"],
-    ["Evidence storage", "Not configured", "The demo captures notes only. It does not upload or securely store evidence files.", "attention_required"],
+    ["Evidence storage", "Metadata only", "Evidence references are stored in this browser. No file upload, managed file storage, access controls or retention policy is connected.", "attention_required"],
     ["Audit history", "Demo activity list", "Local activity entries can be edited or cleared with browser data; they are not an immutable audit trail.", "attention_required"],
     ["Cloud integrations", "Disconnected", "No credentials, external providers, webhooks or synchronization jobs are configured.", "attention_required"],
     ["Notifications", "Not configured", "No email, push, SMS or manager escalation messages are sent.", "review_required"],
@@ -905,7 +905,8 @@ function renderModal() {
         '" data-audit-check="' + esc(item.id) + '" data-audit-id="' + esc(audit.id) + '"' + (audit.status !== "in_progress" ? " disabled" : "") + '><span class="check-box"></span><span><span class="check-label">' + esc(item.label) + '</span><span class="check-meta">' +
         (["done", "not_applicable"].includes(item.status) ? "Marked complete in demo" : "Required step · not complete") + '</span></span></button>').join("") + '</div>' +
       (!allDone && audit.status === "in_progress" ? '<p class="field-note top-space">The conclusion action remains disabled until every required step is marked complete.</p>' : '') +
-      (audit.completionNote ? '<div class="modal-section-title">Recorded conclusion</div><p class="page-subtitle">' + esc(audit.completionNote) + '</p>' : ''),
+      (audit.completionNote ? '<div class="modal-section-title">Recorded conclusion</div><p class="page-subtitle">' + esc(audit.completionNote) + '</p>' : '') +
+      renderEvidenceForEntity("audit", audit.id),
       footer, true);
   }
   if (type === "create-review") {
@@ -991,7 +992,7 @@ function render() {
     '<div class="topbar-actions"><form class="search-box" id="searchForm" role="search">' + icon("search") +
     '<input id="globalSearch" name="q" type="search" value="' + esc(searchQuery) + '" placeholder="Search all records (Ctrl/⌘K)…" aria-label="Search all records"><button class="link-button" type="submit" aria-label="Search all registers">Search</button></form>' +
     '<div class="user-chip"><div class="avatar">DO</div><div class="user-details"><div class="user-name">Demo operator</div><div class="user-role">Local demo identity</div></div></div></div></header>' +
-    '<main class="page-container"><div class="demo-banner">' + icon("info") + '<div><strong>Sample workspace · Browser-local data</strong><p>For product exploration and domain-rule testing only. No live sites, shared users, evidence storage or external systems are connected.</p></div></div>' +
+    '<main class="page-container"><div class="demo-banner">' + icon("info") + '<div><strong>Sample workspace · Browser-local data</strong><p>For product exploration and domain-rule testing only. No live sites, shared users, managed evidence-file storage or external systems are connected.</p></div></div>' +
     '<section id="page-content">' + renderPage() + '</section></main></div>' + renderModal() +
     (toastState ? '<div class="toast ' + (toastState.isError ? "error" : "") + '" role="status" aria-live="polite">' + esc(toastState.message) + '</div>' : '') +
     '</div>';
@@ -1047,8 +1048,11 @@ function onClick(event) {
   if (openEvidenceButton) { openModal("evidence-detail", openEvidenceButton.dataset.openEvidence); return; }
   const reviewEvidenceButton = target.closest("[data-review-evidence]");
   if (reviewEvidenceButton) {
-    openModal("review-evidence", reviewEvidenceButton.dataset.reviewEvidence);
-    modalState.target = reviewEvidenceButton.dataset.evidenceTarget;
+    modalState = {
+      type: "review-evidence",
+      id: reviewEvidenceButton.dataset.reviewEvidence,
+      target: reviewEvidenceButton.dataset.evidenceTarget
+    };
     render();
     return;
   }
