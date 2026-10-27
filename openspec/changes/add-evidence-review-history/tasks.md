@@ -21,7 +21,7 @@
 ## 4. Documentation and release verification
 
 - [x] **4.1** Update evidence traceability, core architecture, README and roadmap to define the review-history prototype, migration limitation and separate production acceptance gate; verify all links and descriptions match the implementation.
-- [x] **4.2** Verified by [GitHub Actions run 40494472095](https://github.com/Loofy147/Inspectra/actions/runs/40494472095) on implementation commit `b32c7fa0c759e8e1d638d439326b0c60637fe03b`: syntax check passed; 29 tests passed, 0 failed.
+- [x] **4.2** Verified by [GitHub Actions run 40495059091](https://github.com/Loofy147/Inspectra/actions/runs/40495059091) on implementation commit `06acbb2b7b83b423cedcc8abae0ae88f37eb9a06`: syntax check passed; 31 tests passed, 0 failed.
 - [ ] **4.3** Inspect and review the final diff; decide whether to mark this draft ready for review. Do not merge until the review gate is met.
 
 ## Workflow follow-up

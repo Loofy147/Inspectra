@@ -2,8 +2,8 @@
 
 **Status:** Implemented prototype on an open draft pull request; not merged  
 **Baseline commit inspected:** `867aae69d85503b1dbf462ed526c241244375d73`  
-**Implementation commit:** `b32c7fa0c759e8e1d638d439326b0c60637fe03b`  
-**Implementation CI:** [Run 40494472095](https://github.com/Loofy147/Inspectra/actions/runs/40494472095), successful; syntax check passed and all 29 tests passed
+**Implementation commit:** `06acbb2b7b83b423cedcc8abae0ae88f37eb9a06`  
+**Implementation CI:** [Run 40495059091](https://github.com/Loofy147/Inspectra/actions/runs/40495059091), successful on the implementation commit; syntax check passed and all 31 tests passed
 
 ## Why
 
@@ -49,7 +49,7 @@ Browser storage remains user-editable and device-local. The data can be cleared 
 - **SCOPE:** Evidence review lifecycle history in the current browser-local demo
 - **AUTHORIZATION:** User requested applying OpenSpec and valuable working assets to improve the engineering method; this record prepares the next already-discussed Inspectra milestone
 - **STATE:** IMPLEMENTED ON DRAFT PR BRANCH; automated CI passed on implementation commit; not merged
-- **EVIDENCE:** Commit `b32c7fa0c759e8e1d638d439326b0c60637fe03b`; [CI run 40494472095](https://github.com/Loofy147/Inspectra/actions/runs/40494472095); syntax check and 29 passing tests; domain, UI, migration, seed and documentation diff
+- **EVIDENCE:** Commit `06acbb2b7b83b423cedcc8abae0ae88f37eb9a06`; [CI run 40495059091](https://github.com/Loofy147/Inspectra/actions/runs/40495059091); syntax check and 31 passing tests; domain, UI, migration, seed and documentation diff
 - **LIMITS / RESIDUAL RISKS:** Browser-local history is not tamper-proof or production-durable; OpenSpec CLI validation and live browser visual verification remain OPEN; human review pending
 - **ROLLBACK:** Revert the feature commit on the draft branch or close the unmerged PR
 - **DATA BOUNDARY:** Professional / project / technical only
