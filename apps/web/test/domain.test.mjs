@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   calculateKpis, closeAction, isActionOverdue, isInspectionOverdue,
-  toCsv, transitionInspection, verifyFinding
+  searchWorkspaceRecords, toCsv, transitionInspection, verifyFinding
 } from "../src/domain.js";
 
 import {
@@ -95,6 +95,25 @@ test("KPI completion and on-time rates use the due cohort denominator", () => {
   assert.equal(kpis.completionRate, 2 / 3);
   assert.equal(kpis.onTimeCount, 1);
   assert.equal(kpis.onTimeRate, 1 / 3);
+});
+
+
+test("workspace search finds records across registers and follows site relationships", () => {
+  const data = {
+    sites: [{ id: "SITE-1", name: "North Distribution Centre" }],
+    inspections: [{ id: "INS-1", title: "Weekly inspection", siteId: "SITE-1", owner: "Maya", status: "scheduled" }],
+    findings: [{ id: "FND-1", title: "Damaged guard", siteId: "SITE-1", status: "open" }],
+    actions: [{ id: "ACT-1", title: "Replace guard", findingId: "FND-1", status: "open" }],
+    audits: [], reviews: [], assets: [], risks: [], people: [], suppliers: []
+  };
+  const siteMatches = searchWorkspaceRecords(data, "north distribution");
+  assert.equal(siteMatches.length, 3, "a site search should match the site and records linked to it");
+  assert.deepEqual(siteMatches.map((item) => item.type), ["Inspection", "Finding", "Site"]);
+  assert.equal(siteMatches[0].openType, "inspection");
+  assert.equal(siteMatches[1].openType, "finding");
+  assert.equal(siteMatches[2].page, "sites");
+  assert.equal(searchWorkspaceRecords(data, "  ").length, 0);
+  assert.equal(searchWorkspaceRecords(data, "no such record").length, 0);
 });
 
 test("CSV output quotes values and neutralizes spreadsheet formula text", () => {
