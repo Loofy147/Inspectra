@@ -296,3 +296,50 @@ tbody tr:hover { background: #fbfcfe; }
 @media (prefers-reduced-motion: reduce) {
   *, *:before, *:after { scroll-behavior: auto !important; transition: none !important; }
 }
+
+
+/* Record-integrity diagnostics */
+.integrity-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 15px;
+}
+.integrity-summary > div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface-muted);
+}
+.integrity-number {
+  font-size: 22px;
+  font-weight: 780;
+  letter-spacing: -.04em;
+  font-variant-numeric: tabular-nums;
+}
+.integrity-label {
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 3px;
+}
+.integrity-ok, .integrity-warning {
+  border-radius: 8px;
+  padding: 12px 13px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.integrity-ok {
+  color: #205e43;
+  background: var(--green-soft);
+  border: 1px solid #ccebd8;
+}
+.integrity-warning {
+  color: #7b2f34;
+  background: var(--red-soft);
+  border: 1px solid #f0d0d3;
+}
+.integrity-ok strong, .integrity-warning strong { display: block; margin-bottom: 3px; }
+.integrity-message { color: var(--ink); font-size: 11px; font-weight: 700; line-height: 1.5; }
+@media (max-width: 520px) {
+  .integrity-summary { grid-template-columns: 1fr; }
+}
