@@ -169,8 +169,14 @@ function recentActivity(limit = 5) {
   ).join("") + '</div>';
 }
 function getSearchText(item) {
-  return [item.id, item.title, item.name, item.owner, item.role, item.category, item.service, item.scope, item.description, item.siteId]
-    .filter(Boolean).join(" ").toLowerCase();
+  const values = [];
+  const collect = (value) => {
+    if (typeof value === "string" || typeof value === "number") values.push(String(value));
+    else if (Array.isArray(value)) value.forEach(collect);
+    else if (value && typeof value === "object") Object.values(value).forEach(collect);
+  };
+  collect(item);
+  return values.join(" ").toLowerCase();
 }
 function applySearch(items) {
   if (!searchQuery.trim()) return items;
