@@ -14,7 +14,12 @@ export function loadWorkspace() {
     if (!stored) return { data: createDemoState(), persistence: "browser-local", mode: "demo" };
     const parsed = JSON.parse(stored);
     if (!validWorkspace(parsed)) return { data: createDemoState(), persistence: "browser-local", mode: "demo" };
-    return { ...parsed, persistence: "browser-local", mode: "demo" };
+    // Add the evidence register when loading an older local snapshot created before evidence metadata existed.
+    const migratedData = {
+      ...parsed.data,
+      evidence: Array.isArray(parsed.data.evidence) ? parsed.data.evidence : []
+    };
+    return { ...parsed, data: migratedData, persistence: "browser-local", mode: "demo" };
   } catch {
     return { data: createDemoState(), persistence: "browser-local", mode: "demo" };
   }
